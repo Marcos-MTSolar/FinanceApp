@@ -45,7 +45,13 @@ export function Login() {
       if (modo === 'login') {
         await signInWithEmailAndPassword(auth, email.trim(), senha);
       } else {
+        console.log('Tentando cadastro com:', { 
+          email: email.trim(), 
+          senhaLength: senha.length,
+          modo 
+        });
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
+        console.log('Cadastro bem sucedido:', cred.user.uid);
         if (nome.trim()) {
           try {
             await updateProfile(cred.user, { displayName: nome.trim() });
@@ -56,7 +62,24 @@ export function Login() {
       }
       navigate('/dashboard');
     } catch (err: any) {
-      setErro(getMensagemErro(err.code));
+      console.error('Erro completo:', {
+        code: err.code,
+        message: err.message,
+        email: email.trim()
+      });
+
+      const mensagens: Record<string, string> = {
+        'auth/user-not-found': 'Usuário não encontrado.',
+        'auth/wrong-password': 'Senha incorreta.',
+        'auth/invalid-credential': 'Email ou senha inválidos.',
+        'auth/email-already-in-use': 'Este email já está cadastrado. Tente fazer login.',
+        'auth/weak-password': 'Senha muito fraca. Use pelo menos 6 caracteres.',
+        'auth/invalid-email': 'Formato de email inválido.',
+        'auth/network-request-failed': 'Sem conexão com a internet.',
+        'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos.',
+        'auth/operation-not-allowed': 'Cadastro desativado. Contate o suporte.',
+      };
+      setErro(mensagens[err.code] || err.message);
     } finally {
       setLoading(false);
     }
