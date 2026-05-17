@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and app settings",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "email": { "type": "string" },
+        "modo": { "type": "string", "enum": ["pessoal", "empresarial"] },
+        "plano": { "type": "string", "enum": ["free", "pro"] },
+        "xp": { "type": "number" },
+        "nivel": { "type": "number" },
+        "criadoEm": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "email", "modo", "plano"]
+    },
+    "Transacao": {
+      "title": "Transaction",
+      "description": "A single financial transaction",
+      "type": "object",
+      "properties": {
+        "valor": { "type": "number" },
+        "tipo": { "type": "string", "enum": ["receita", "despesa"] },
+        "categoria": { "type": "string" },
+        "descricao": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" },
+        "origem": { "type": "string", "enum": ["manual", "importado", "ia"] },
+        "recorrente": { "type": "boolean" },
+        "userId": { "type": "string" }
+      },
+      "required": ["valor", "tipo", "categoria", "data", "userId"]
+    },
+    "Meta": {
+      "title": "Financial Goal",
+      "description": "User's financial goal",
+      "type": "object",
+      "properties": {
+        "titulo": { "type": "string" },
+        "valorAlvo": { "type": "number" },
+        "valorAtual": { "type": "number" },
+        "prazo": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ativa", "concluida", "cancelada"] },
+        "tipo": { "type": "string", "enum": ["pessoal", "empresarial"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["titulo", "valorAlvo", "valorAtual", "prazo", "tipo", "userId"]
+    },
+    "Diagnostico": {
+      "title": "Diagnostic",
+      "description": "Initial diagnostic results",
+      "type": "object",
+      "properties": {
+        "respostas": { "type": "object" },
+        "score": { "type": "number" },
+        "criadoEm": { "type": "string", "format": "date-time" },
+        "atualizadoEm": { "type": "string", "format": "date-time" }
+      },
+      "required": ["score", "criadoEm"]
+    },
+    "Empresarial": {
+      "title": "Business Data",
+      "description": "Business profile data for the user",
+      "type": "object",
+      "properties": {
+        "faturamento": { "type": "number" },
+        "funcionarios": { "type": "number" },
+        "margemEstimada": { "type": "number" },
+        "capitalDeGiro": { "type": "number" },
+        "dividasEmpresariais": { "type": "number" }
+      },
+      "required": ["faturamento", "funcionarios"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Store all user profiles"
+    },
+    "/transacoes/{userId}/items/{transacaoId}": {
+      "schema": { "$ref": "#/entities/Transacao" },
+      "description": "Store all transactions belonging to a user"
+    },
+    "/metas/{userId}/lista/{metaId}": {
+      "schema": { "$ref": "#/entities/Meta" },
+      "description": "Store all goals belonging to a user"
+    },
+    "/diagnostico/{userId}": {
+      "schema": { "$ref": "#/entities/Diagnostico" },
+      "description": "Store the diagnostic profile for a user"
+    },
+    "/empresarial/{userId}": {
+      "schema": { "$ref": "#/entities/Empresarial" },
+      "description": "Store the business profile for a user"
+    }
+  }
+}

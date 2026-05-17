@@ -1,0 +1,8 @@
+{
+  "name": "FinanceAI",
+  "description": "A robust financial application prototype with Personal and Business modes, using Firebase and AI features.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
