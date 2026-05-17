@@ -181,19 +181,6 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    
-    if (localStorage.getItem('mock_user')) {
-      setTransacoes([
-        { id: '1', tipo: 'receita', valor: 8500, descricao: 'Salário Mock', data: new Date().toISOString(), categoria: 'Renda Fixa' },
-        { id: '2', tipo: 'despesa', valor: 2500, descricao: 'Aluguel', data: new Date().toISOString(), categoria: 'Moradia' },
-        { id: '3', tipo: 'despesa', valor: 450, descricao: 'Mercado', data: new Date().toISOString(), categoria: 'Alimentação' },
-      ]);
-      setMetas([
-        { id: 'm1', titulo: 'Viagem', progresso: 50, status: 'ativa', valorAlvo: 5000, progressoAtual: 2500 }
-      ]);
-      setDiagnostico({ score: 850, perfil: 'Conservador' });
-      return;
-    }
 
     const qTransacoes = query(collection(db, `transacoes/${user.uid}/items`), orderBy('data', 'desc'));
     const unsubTrans = onSnapshot(qTransacoes, (snapshot) => {
