@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -9,9 +10,12 @@ import * as pdfParseModule from 'pdf-parse';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
+import multer from 'multer';
 import { generatePdfStream } from './serverReportGenerator';
 
 dotenv.config();
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -184,10 +188,27 @@ async function startServer() {
   });
 
   // API Route to classify transactions using Groq
-  app.post('/api/ia/classificar', requireAuth, aiLimiter, async (req, res) => {
+  app.post('/api/ia/classificar', requireAuth, aiLimiter, upload.single('file'), async (req: any, res: any) => {
     try {
-      // payload pode ser um array de transações brutas ou um texto OCR/PDF
-      const { transacoes, textoBruto } = req.body; 
+      let textoBruto = req.body.textoBruto || ''; 
+      let transacoes = req.body.transacoes ? JSON.parse(req.body.transacoes) : null;
+      
+      const fileBuffer = req.file?.buffer;
+      if (fileBuffer) {
+        const ext = req.file.originalname.split('.').pop()?.toLowerCase();
+        if (ext === 'pdf') {
+          const pdfParse = pdfParseModule.default || pdfParseModule;
+          const data = await pdfParse(Buffer.from(fileBuffer));
+          textoBruto = data.text;
+        } else if (['csv', 'ofx'].includes(ext || '')) {
+          textoBruto = fileBuffer.toString('utf-8');
+        } else if (['xlsx', 'xls'].includes(ext || '')) {
+          const XLSX = await import('xlsx');
+          const workbook = XLSX.read(fileBuffer);
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          transacoes = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        }
+      }
 
       let prompt = `Você é um assistente financeiro especialista em análise de dados.`;
       
@@ -211,17 +232,17 @@ ${JSON.stringify(transacoes.slice(0, 50))} // limiter
 
       prompt += `
 Instrução estrita:
-Retorne APENAS um JSON válido contendo um objeto com a chave "transacoes", cujo valor é uma lista/array de objetos.
+Responda APENAS com um JSON válido, sem texto adicional, sem markdown, sem explicações.
+O JSON deve conter obrigatoriamente um objeto com a chave "transacoes", cujo valor é uma lista/array de objetos.
 Cada objeto da lista DEVE conter:
 - descricao: nome legível da transação
-- valor: número (positivo para receita, negativo para despesa). Tente formatar corretamente baseado no texto.
+- valor: número (positivo para receita, negativo para despesa). Formate como número.
 - data: formato YYYY-MM-DD
 - categoria: escolha EXATAMENTE UMA destas: Alimentação, Transporte, Moradia, Saúde, Lazer, Assinatura, Investimento, Salário, Venda, Fornecedor, Imposto, Outros
 - tipo: "receita" ou "despesa"
 - recorrente: boolean (true se parecer ser uma assinatura ou parcela recorrente)
 
-Formato esperado: { "transacoes": [...] }
-Não adicione markdown ou blocos de texto antes ou depois do JSON.`;
+Formato esperado: { "transacoes": [...] }`;
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
@@ -231,20 +252,28 @@ Não adicione markdown ou blocos de texto antes ou depois do JSON.`;
       });
 
       const aiResponse = chatCompletion.choices[0]?.message?.content;
+      console.log('Resposta bruta do modelo Groq em /api/ia/classificar:', aiResponse);
+
       if (aiResponse) {
-        const parsed = JSON.parse(aiResponse);
-        return res.json({ transacoes: parsed.transacoes || [] });
+        try {
+          const parsed = JSON.parse(aiResponse);
+          return res.json({ transacoes: parsed.transacoes || [] });
+        } catch (parseError) {
+          console.error('Erro no JSON.parse da resposta do Groq:', parseError, 'Texto retornado:', aiResponse);
+          return res.status(500).json({ error: 'Erro ao analisar a resposta da IA como JSON válido.' });
+        }
       } else {
         return res.status(500).json({ error: 'Sem resposta da IA' });
       }
     } catch (err: any) {
-      console.error('Error classifying with Groq:', err);
-      res.status(500).json({ error: 'Erro na classificação via IA' });
+      console.error('Error classifying with Groq in /api/ia/classificar:', err);
+      res.status(500).json({ error: 'Erro na classificação via IA: ' + err.message });
     }
   });
 
   // API Route for AI Chat Streaming
   app.post('/api/groq/chat', requireAuth, aiLimiter, async (req, res) => {
+    console.log("GROQ_API_KEY carregada:", !!process.env.GROQ_API_KEY);
     const { messages, context } = req.body;
     
     res.setHeader('Content-Type', 'text/event-stream');
@@ -273,8 +302,8 @@ Não adicione markdown ou blocos de texto antes ou depois do JSON.`;
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
-      console.error('Chat error:', error);
-      res.write(`data: ${JSON.stringify({ error: 'Failed to generate response' })}\n\n`);
+      console.error('Chat error no /api/groq/chat:', error);
+      res.write(`data: ${JSON.stringify({ error: 'Erro no servidor: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
       res.end();
     }
   });

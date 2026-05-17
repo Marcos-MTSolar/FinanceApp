@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { db, storage } from '../lib/firebaseConfig';
+import { db } from '../lib/firebaseConfig';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Tesseract from 'tesseract.js';
@@ -59,46 +58,18 @@ export function ImportData() {
     setProgressMsg(`Analisando ${file.name}...`);
     
     try {
-      let textoBruto = '';
-      let transacoesBrutas: any[] | null = null;
       const ext = file.name.split('.').pop()?.toLowerCase();
+      const formData = new FormData();
 
-      if (['csv', 'xlsx', 'xls'].includes(ext || '')) {
-        // Read file using FileReader
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        transacoesBrutas = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      } else if (['jpg', 'jpeg', 'png'].includes(ext || '')) {
+      if (['jpg', 'jpeg', 'png'].includes(ext || '')) {
         setProgressMsg('Lendo nota fiscal de imagem (OCR)...');
         const worker = await Tesseract.createWorker("por");
         const ret = await worker.recognize(file);
-        textoBruto = ret.data.text;
+        formData.append('textoBruto', ret.data.text);
         await worker.terminate();
-      } else if (['pdf', 'ofx'].includes(ext || '')) {
-        // We will upload it to Firebase Storage and let backend or parse it locally
-        // Actually, OFX is just text, we can read it easily
-        if (ext === 'ofx') {
-          textoBruto = await file.text();
-        } else {
-          // PDF -> upload and use Backend
-          setProgressMsg('Fazendo upload do PDF seguro...');
-          const storageRef = ref(storage, `imports/${user?.uid}/${Date.now()}_${file.name}`);
-          const snapshot = await uploadBytes(storageRef, file);
-          const downloadURL = await getDownloadURL(snapshot.ref);
-
-          setProgressMsg('Extraindo transações do PDF...');
-          const pdfRes = await fetch('/api/parse-pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: downloadURL })
-          });
-          const pdfData = await pdfRes.json();
-          if (pdfData.error) throw new Error(pdfData.error);
-          textoBruto = pdfData.text;
-        }
       } else {
-        throw new Error('Formato de arquivo não suportado');
+        setProgressMsg('Enviando documento seguro para análise...');
+        formData.append('file', file);
       }
 
       setProgressMsg('Classificando com Inteligência Artificial...');
@@ -106,10 +77,9 @@ export function ImportData() {
       const classificarRes = await fetch('/api/ia/classificar', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify(textoBruto ? { textoBruto } : { transacoes: transacoesBrutas })
+        body: formData
       });
       const classificarData = await classificarRes.json();
       

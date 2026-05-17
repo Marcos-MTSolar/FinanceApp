@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'FinanceAI',
   webDir: 'dist',
   server: {
-    url: 'https://aplicativo-financeiro-woad-kappa.vercel.app',
+    androidScheme: 'https',
     cleartext: false
   }
 };

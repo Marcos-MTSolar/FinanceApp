@@ -22,7 +22,7 @@ export function Metas() {
   const { width, height } = useWindowSize(); // for Confetti
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
     
     if (localStorage.getItem('mock_user')) {
       setMetas([
@@ -36,17 +36,17 @@ export function Metas() {
     const unsub = onSnapshot(q, (snap) => {
       setMetas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Erro ao buscar metas no Firestore:", error);
+      setLoading(false);
     });
     return () => unsub();
-  }, [user]);
+  }, [user?.uid]);
 
   const sgIA = async () => {
-    if (!user) return;
+    if (!user?.uid) return;
     setAiLoading(true);
     try {
-      // Mocking diagnostico pull for demo, in real life we could grab docs like:
-      // const dSnap = await getDocs(collection(db, 'diagnostico'));
-      // For now let's just make the request.
       const token = await user?.getIdToken();
       const res = await fetch('/api/groq/sugerir-meta', {
         method: 'POST',
@@ -54,7 +54,7 @@ export function Metas() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ diagnostico: { respostas: {} } }) // passed mocked or real diag
+        body: JSON.stringify({ diagnostico: { respostas: {} } }) 
       });
       const data = await res.json();
       if (data.titulo) {
@@ -65,51 +65,64 @@ export function Metas() {
         });
       }
     } catch (e) {
-      console.error(e);
+      console.error("Erro ao sugerir meta via IA:", e);
     } finally {
       setAiLoading(false);
     }
   };
 
   const handleCreate = async () => {
-    if (!user || !novaMeta.titulo) return;
-    await addDoc(collection(db, `metas/${user.uid}/items`), {
-      ...novaMeta,
-      valorAlvo: Number(novaMeta.valorAlvo),
-      progressoAtual: 0,
-      status: 'ativa',
-      criadoEm: serverTimestamp()
-    });
-    setIsModalOpen(false);
-    setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
+    if (!user?.uid || !novaMeta.titulo) return;
+    try {
+      await addDoc(collection(db, `metas/${user.uid}/items`), {
+        ...novaMeta,
+        valorAlvo: Number(novaMeta.valorAlvo),
+        progressoAtual: 0,
+        status: 'ativa',
+        userId: user.uid,
+        criadoEm: serverTimestamp()
+      });
+      setIsModalOpen(false);
+      setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
+    } catch (error) {
+      console.error("Erro ao cadastrar meta no Firestore:", error);
+      alert("Erro ao criar meta. Verifique permissões ou conexão com o Firestore.");
+    }
   };
 
   const handleComplete = async (id: string) => {
-    if (!user) return;
-    await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
-      status: 'concluida',
-      concluidoEm: serverTimestamp()
-    });
+    if (!user?.uid) return;
+    try {
+      await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
+        status: 'concluida',
+        concluidoEm: serverTimestamp()
+      });
 
-    // Reward XP +500
-    const xpResult = await addXp(user.uid, 500);
+      const xpResult = await addXp(user.uid, 500);
 
-    setShowConfetti(true);
-    if (xpResult?.leveledUp) {
-      setLevelUpMsg(`Parabéns! Você alcançou o Nível ${xpResult.nivel}: ${xpResult.name}`);
+      setShowConfetti(true);
+      if (xpResult?.leveledUp) {
+        setLevelUpMsg(`Parabéns! Você alcançou o Nível ${xpResult.nivel}: ${xpResult.name}`);
+      }
+      
+      setTimeout(() => {
+        setShowConfetti(false);
+        setLevelUpMsg('');
+      }, 5000);
+    } catch (error) {
+      console.error("Erro ao concluir meta no Firestore:", error);
     }
-    
-    setTimeout(() => {
-      setShowConfetti(false);
-      setLevelUpMsg('');
-    }, 5000);
   };
 
   const handleAbandon = async (id: string) => {
-    if (!user) return;
-    await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
-      status: 'abandonada'
-    });
+    if (!user?.uid) return;
+    try {
+      await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
+        status: 'abandonada'
+      });
+    } catch (error) {
+      console.error("Erro ao abandonar meta no Firestore:", error);
+    }
   };
 
   const activeMetas = metas.filter(m => m.status === 'ativa');
@@ -263,11 +276,16 @@ export function Metas() {
                   <button 
                     onClick={async () => {
                       const val = prompt('Quanto adicionar de progresso? (R$)', '100');
-                      if (val && !isNaN(Number(val)) && user) {
-                         const novoProg = (m.progressoAtual || 0) + Number(val);
-                         await updateDoc(doc(db, `metas/${user.uid}/items`, m.id), { progressoAtual: novoProg });
-                         if (novoProg >= m.valorAlvo) {
-                           handleComplete(m.id);
+                      if (val && !isNaN(Number(val)) && user?.uid) {
+                         try {
+                           const novoProg = (m.progressoAtual || 0) + Number(val);
+                           await updateDoc(doc(db, `metas/${user.uid}/items`, m.id), { progressoAtual: novoProg });
+                           if (novoProg >= m.valorAlvo) {
+                             handleComplete(m.id);
+                           }
+                         } catch (err) {
+                           console.error("Erro ao atualizar progresso da meta:", err);
+                           alert("Erro ao atualizar progresso.");
                          }
                       }
                     }}

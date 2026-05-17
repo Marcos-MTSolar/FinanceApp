@@ -65,11 +65,6 @@ export function Dashboard() {
 
     setLoading(true);
 
-    const timer = setTimeout(() => {
-      console.warn("Firestore timeout de 5 segundos atingido. Apresentando fallback com dados zerados/em cache.");
-      setLoading(false);
-    }, 5000);
-
     let unsubTrans = () => {};
     let unsubMetas = () => {};
     let unsubDiag = () => {};
@@ -92,15 +87,18 @@ export function Dashboard() {
         collection(db, `transacoes/${user.uid}/items`),
         orderBy('data', 'desc')
       );
+      
+      const timeout = setTimeout(() => setLoading(false), 5000);
+      
       unsubTrans = onSnapshot(qTrans, (snapshot) => {
+        clearTimeout(timeout);
         const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setTransactions(list);
         setLoading(false);
-        clearTimeout(timer);
       }, (error) => {
+        clearTimeout(timeout);
         console.error('Erro ao buscar transações do Firestore no Dashboard:', error);
         setLoading(false);
-        clearTimeout(timer);
       });
 
       // Metas
@@ -122,11 +120,9 @@ export function Dashboard() {
     } catch (err) {
       console.error('Falha ao inicializar conexões com Firestore no Dashboard:', err);
       setLoading(false);
-      clearTimeout(timer);
     }
 
     return () => {
-      clearTimeout(timer);
       unsubTrans();
       unsubMetas();
       unsubDiag();

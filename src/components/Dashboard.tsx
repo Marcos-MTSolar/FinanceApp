@@ -94,8 +94,8 @@ export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { ch
           ))}
         </div>
       </div>
-      <div className="h-72 w-full pt-4">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="min-h-[300px] w-full overflow-hidden pt-4">
+        <ResponsiveContainer width="99%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.15} />
             <XAxis dataKey="data" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} dy={10} />
@@ -431,9 +431,9 @@ export function Dashboard() {
             {isPessoal && (
               <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                 <h3 className="font-bold text-lg mb-4 tracking-tight">Top Despesas</h3>
-                <div className="h-48 w-full relative">
+                <div className="min-h-[300px] w-full overflow-hidden relative">
                   {pieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="99%" height={300}>
                       <PieChart>
                         <Pie data={pieData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
                           {pieData.map((e, index) => (
