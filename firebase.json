@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "Configure security rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

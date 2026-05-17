@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2 } from 'lucide-react';
 import { addXp, getLevelInfo } from '../lib/gamification';
 import { criarNotificacao } from './NotificacoesDropdown';
@@ -99,12 +99,22 @@ export function Metas() {
         await criarNotificacao(uid, `🎉 Parabéns! Você atingiu a meta "${metaAtual.titulo}"!`);
       }
 
-      const xpResult = await addXp(uid, 500);
+      // Captura nível atual antes de adicionar XP
+      const snapAntes = await getDoc(doc(db, 'users', uid));
+      const xpAntes = snapAntes.data()?.xp || 0;
+      const nivelAntes = getLevelInfo(xpAntes).currentLevel.level;
+
+      await addXp(uid, 500);
+
+      // Captura novo nível após adicionar XP
+      const snapDepois = await getDoc(doc(db, 'users', uid));
+      const xpDepois = snapDepois.data()?.xp || 0;
+      const { currentLevel: nivelAtualInfo } = getLevelInfo(xpDepois);
 
       setShowConfetti(true);
-      if (xpResult?.leveledUp) {
-        setLevelUpMsg(`Parabéns! Você alcançou o Nível ${xpResult.nivel}: ${xpResult.name}`);
-        await criarNotificacao(uid, `⬆️ Você subiu para o Nível ${xpResult.nivel}: ${xpResult.name}!`);
+      if (nivelAtualInfo.level > nivelAntes) {
+        setLevelUpMsg(`Parabéns! Você alcançou o Nível ${nivelAtualInfo.level}: ${nivelAtualInfo.name}`);
+        await criarNotificacao(uid, `⬆️ Você subiu para o Nível ${nivelAtualInfo.level}: ${nivelAtualInfo.name}!`);
       }
 
       setTimeout(() => {
@@ -115,6 +125,7 @@ export function Metas() {
       console.error('Erro ao concluir meta no Firestore:', error);
     }
   };
+
 
   const handleDelete = async (id: string) => {
     const uid = user?.uid;
