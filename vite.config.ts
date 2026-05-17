@@ -26,6 +26,9 @@ export default defineConfig(({mode}) => {
     },
     build: {
       target: 'es2022',
+      rollupOptions: {
+        external: ['@react-pdf/renderer']
+      }
     },
     optimizeDeps: {
       exclude: ['@react-pdf/renderer'],

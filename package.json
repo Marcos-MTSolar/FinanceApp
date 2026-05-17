@@ -17,7 +17,6 @@
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@google/genai": "^1.29.0",
-    "@react-pdf/renderer": "^4.5.1",
     "@tailwindcss/vite": "^4.1.14",
     "@types/canvas-confetti": "^1.9.0",
     "@types/qrcode": "^1.5.6",
@@ -59,6 +58,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "@react-pdf/renderer": "^4.5.1"
   }
 }
