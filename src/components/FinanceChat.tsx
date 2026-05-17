@@ -21,31 +21,18 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
   useEffect(() => {
     if (!user) return;
 
-    if (localStorage.getItem('mock_user')) {
-      setMessages([
-        { id: '1', role: 'assistant', content: 'Olá! Sou seu assistente financeiro. Como posso ajudar com suas finanças hoje?', timestamp: new Date() }
-      ]);
-      setContext({
-        score: profile?.nivel ? profile.nivel * 100 : 500,
-        renda: 5000, 
-        dividas: 0,
-        economias: 10000
-      });
-      return;
-    }
-
-    // Listen to chat history
+    // Escuta histórico de mensagens do Firestore
     const q = query(collection(db, `chats/${user.uid}/messages`), orderBy('timestamp', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       scrollToBottom();
     });
 
-    // Compile user context
+    // Contexto do usuário para o prompt do Groq
     const fetchContext = async () => {
       setContext({
-        score: profile?.nivel ? profile.nivel * 100 : 500, // mock score context
-        renda: 5000, 
+        score: profile?.nivel ? profile.nivel * 100 : 500,
+        renda: 5000,
         dividas: 1500,
         economias: 2000
       });
@@ -70,24 +57,7 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
     setInput('');
     setIsTyping(true);
 
-    if (localStorage.getItem('mock_user')) {
-      const newUserMsg = { id: Date.now().toString(), role: 'user', content: userMessage, timestamp: new Date() };
-      setMessages(prev => [...prev, newUserMsg]);
-      
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Esta é uma resposta mockada da IA do FinanceAI.',
-          timestamp: new Date()
-        }]);
-        setIsTyping(false);
-        scrollToBottom();
-      }, 1000);
-      return;
-    }
-
-    // Save user message to Firestore
+    // Salva mensagem do usuário no Firestore
     await addDoc(collection(db, `chats/${user.uid}/messages`), {
       role: 'user',
       content: userMessage,
@@ -95,7 +65,6 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
     });
 
     try {
-      // Format history for Groq
       const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
       history.push({ role: 'user', content: userMessage });
 
@@ -148,7 +117,7 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
       });
 
     } catch (error) {
-      console.error(error);
+      console.error('[FinanceChat] Erro na chamada Groq:', error);
     } finally {
       setIsTyping(false);
     }

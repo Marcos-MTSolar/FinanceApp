@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
-import { getAuth } from 'firebase/auth';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2 } from 'lucide-react';
 import { addXp, getLevelInfo } from '../lib/gamification';
 import { criarNotificacao } from './NotificacoesDropdown';
@@ -25,21 +24,13 @@ export function Metas() {
 
   useEffect(() => {
     if (!user?.uid) return;
-    
-    if (localStorage.getItem('mock_user')) {
-      setMetas([
-        { id: 'm1', titulo: 'Viagem para a Praia', valorAlvo: 5000, progressoAtual: 2500, status: 'ativa', prazo: '2026-12-31', categoria: 'Pessoal' }
-      ]);
-      setLoading(false);
-      return;
-    }
 
     const q = query(collection(db, `metas/${user.uid}/items`));
     const unsub = onSnapshot(q, (snap) => {
       setMetas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     }, (error) => {
-      console.error("Erro ao buscar metas no Firestore:", error);
+      console.error('Erro ao buscar metas no Firestore:', error);
       setLoading(false);
     });
     return () => unsub();
@@ -75,8 +66,7 @@ export function Metas() {
   };
 
   const handleCreate = async () => {
-    const auth = getAuth();
-    const uid = auth.currentUser?.uid;
+    const uid = user?.uid;
     if (!uid || !novaMeta.titulo) return;
     try {
       await addDoc(collection(db, `metas/${uid}/items`), {
@@ -90,24 +80,21 @@ export function Metas() {
       setIsModalOpen(false);
       setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
     } catch (error) {
-      console.error("Erro ao cadastrar meta no Firestore (verifique permissões):", error);
-      alert("Erro ao criar meta. Verifique permissões ou conexão com o Firestore.");
+      console.error('Erro ao cadastrar meta no Firestore:', error);
+      alert('Erro ao criar meta. Verifique permissões ou conexão com o Firestore.');
     }
   };
 
   const handleComplete = async (id: string) => {
-    const auth = getAuth();
-    const uid = auth.currentUser?.uid;
+    const uid = user?.uid;
     if (!uid) return;
     try {
-      // Busca o título da meta para a notificação
       const metaAtual = metas.find(m => m.id === id);
       await updateDoc(doc(db, `metas/${uid}/items`, id), {
         status: 'concluida',
         concluidoEm: serverTimestamp()
       });
 
-      // Notificação: meta atingida
       if (metaAtual?.titulo) {
         await criarNotificacao(uid, `🎉 Parabéns! Você atingiu a meta "${metaAtual.titulo}"!`);
       }
@@ -117,29 +104,27 @@ export function Metas() {
       setShowConfetti(true);
       if (xpResult?.leveledUp) {
         setLevelUpMsg(`Parabéns! Você alcançou o Nível ${xpResult.nivel}: ${xpResult.name}`);
-        // Notificação: subiu de nível
         await criarNotificacao(uid, `⬆️ Você subiu para o Nível ${xpResult.nivel}: ${xpResult.name}!`);
       }
-      
+
       setTimeout(() => {
         setShowConfetti(false);
         setLevelUpMsg('');
       }, 5000);
     } catch (error) {
-      console.error("Erro ao concluir meta no Firestore:", error);
+      console.error('Erro ao concluir meta no Firestore:', error);
     }
   };
 
   const handleDelete = async (id: string) => {
-    const auth = getAuth();
-    const uid = auth.currentUser?.uid;
+    const uid = user?.uid;
     if (!uid) return;
-    if (!window.confirm("Deseja realmente excluir esta meta permanentemente?")) return;
+    if (!window.confirm('Deseja realmente excluir esta meta permanentemente?')) return;
     try {
       await deleteDoc(doc(db, `metas/${uid}/items`, id));
     } catch (error) {
-      console.error("Erro ao excluir meta no Firestore:", error);
-      alert("Erro ao excluir. Verifique permissões.");
+      console.error('Erro ao excluir meta no Firestore:', error);
+      alert('Erro ao excluir. Verifique permissões.');
     }
   };
 
