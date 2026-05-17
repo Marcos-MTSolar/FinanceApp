@@ -3,7 +3,36 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: any }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('ErrorBoundary capturou:', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, color: 'white', background: '#111' }}>
+          <h2>Erro capturado:</h2>
+          <pre>{this.state.error?.message}</pre>
+          <pre>{this.state.error?.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { AuthProvider } from './hooks/useAuth';
 import { PlanProvider } from './hooks/usePlan';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -20,80 +49,82 @@ import { FinanceChat } from './components/FinanceChat';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <PlanProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <OnboardingWizard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/transacoes"
-              element={
-                <ProtectedRoute>
-                  <Transacoes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/metas"
-              element={
-                <ProtectedRoute>
-                  <MetasPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/importar"
-              element={
-                <ProtectedRoute>
-                  <ImportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat"
-              element={
-                <ProtectedRoute>
-                  <ChatPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/niveis"
-              element={
-                <ProtectedRoute>
-                  <NiveisPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/simulador"
-              element={
-                <ProtectedRoute>
-                  <Simulador />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-          <FinanceChat />
-        </Router>
-      </PlanProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <PlanProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingWizard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/transacoes"
+                element={
+                  <ProtectedRoute>
+                    <Transacoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/metas"
+                element={
+                  <ProtectedRoute>
+                    <MetasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/importar"
+                element={
+                  <ProtectedRoute>
+                    <ImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/niveis"
+                element={
+                  <ProtectedRoute>
+                    <NiveisPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/simulador"
+                element={
+                  <ProtectedRoute>
+                    <Simulador />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+            <FinanceChat />
+          </Router>
+        </PlanProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
