@@ -14,6 +14,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@react-pdf/renderer': '@react-pdf/renderer',
       },
     },
     server: {

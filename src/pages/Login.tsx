@@ -47,7 +47,11 @@ export function Login() {
       } else {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
         if (nome.trim()) {
-          await updateProfile(cred.user, { displayName: nome.trim() });
+          try {
+            await updateProfile(cred.user, { displayName: nome.trim() });
+          } catch (profileError) {
+            console.warn('Erro ao salvar nome, continuando...', profileError);
+          }
         }
       }
       navigate('/dashboard');
