@@ -43,7 +43,7 @@ export function Transacoes() {
   const { profile } = useAuth();
   const [user, setUser] = useState(auth.currentUser);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,21 +67,41 @@ export function Transacoes() {
       return;
     }
 
-    const q = query(
-      collection(db, `transacoes/${user.uid}/items`),
-      orderBy('data', 'desc')
-    );
+    setLoading(true);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTransactions(list);
+    const timer = setTimeout(() => {
+      console.warn("Firestore timeout de 5 segundos em Transacoes. Apresentando fallback.");
       setLoading(false);
-    }, (error) => {
-      console.error('Erro ao buscar transações do Firestore:', error);
-      setLoading(false);
-    });
+    }, 5000);
 
-    return () => unsubscribe();
+    let unsubscribe = () => {};
+
+    try {
+      const q = query(
+        collection(db, `transacoes/${user.uid}/items`),
+        orderBy('data', 'desc')
+      );
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTransactions(list);
+        setLoading(false);
+        clearTimeout(timer);
+      }, (error) => {
+        console.error('Erro ao buscar transações do Firestore em Transacoes:', error);
+        setLoading(false);
+        clearTimeout(timer);
+      });
+    } catch (err) {
+      console.error('Falha ao conectar transações:', err);
+      setLoading(false);
+      clearTimeout(timer);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [user?.uid]);
 
   const handleDelete = async (id: string) => {
@@ -297,7 +317,7 @@ export function Transacoes() {
               </p>
             </div>
             <button
-              onClick={() => setIsNewTxModalOpen(true)}
+              onClick={() => setIsModalOpen(true)}
               className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -464,11 +484,11 @@ export function Transacoes() {
         </div>
       </main>
 
-      {user?.uid && (
+      {isModalOpen && (
         <NewTransactionModal
-          isOpen={isNewTxModalOpen}
-          onClose={() => setIsNewTxModalOpen(false)}
-          userId={user.uid}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          userId={user?.uid || 'demo'}
         />
       )}
     </div>

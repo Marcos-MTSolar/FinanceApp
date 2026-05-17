@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { HeaderXPBar } from '../components/HeaderXPBar';
@@ -24,7 +24,9 @@ import {
   Menu,
   X,
   Upload,
-  MessageCircle
+  MessageCircle,
+  Plus,
+  Briefcase
 } from 'lucide-react';
 
 export function Dashboard() {
@@ -32,7 +34,7 @@ export function Dashboard() {
   const location = useLocation();
   const { profile } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [metas, setMetas] = useState<any[]>([]);
@@ -40,6 +42,10 @@ export function Dashboard() {
   const [alertasFlash, setAlertasFlash] = useState<string[]>([]);
   const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
+
+  // Estado do Modo (pessoal | empresarial)
+  const [modo, setModo] = useState<'pessoal' | 'empresarial'>('pessoal');
+  const [changingModo, setChangingModo] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -57,37 +63,72 @@ export function Dashboard() {
       return;
     }
 
-    // Transações
-    const qTrans = query(
-      collection(db, `transacoes/${user.uid}/items`),
-      orderBy('data', 'desc')
-    );
-    const unsubTrans = onSnapshot(qTrans, (snapshot) => {
-      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setTransactions(list);
-      setLoading(false);
-    }, (error) => {
-      console.error('Erro ao buscar transações do Firestore:', error);
-      setLoading(false);
-    });
+    setLoading(true);
 
-    // Metas
-    const qMetas = query(collection(db, `metas/${user.uid}/items`));
-    const unsubMetas = onSnapshot(qMetas, (snapshot) => {
-      setMetas(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    const timer = setTimeout(() => {
+      console.warn("Firestore timeout de 5 segundos atingido. Apresentando fallback com dados zerados/em cache.");
+      setLoading(false);
+    }, 5000);
 
-    // Diagnóstico / Score
-    const unsubDiag = onSnapshot(doc(db, 'diagnostico', user.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        setDiagnostico(docSnap.data());
-      }
-    });
+    let unsubTrans = () => {};
+    let unsubMetas = () => {};
+    let unsubDiag = () => {};
+    let unsubUser = () => {};
+
+    try {
+      // Perfil/Modo do Usuário (users/{userId})
+      unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+        if (docSnap.exists() && docSnap.data().modo) {
+          setModo(docSnap.data().modo);
+        }
+      }, (error) => {
+        console.error('Erro ao buscar perfil/modo do usuário no Firestore:', error);
+      });
+
+      // Transações
+      const qTrans = query(
+        collection(db, `transacoes/${user.uid}/items`),
+        orderBy('data', 'desc')
+      );
+      unsubTrans = onSnapshot(qTrans, (snapshot) => {
+        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setTransactions(list);
+        setLoading(false);
+        clearTimeout(timer);
+      }, (error) => {
+        console.error('Erro ao buscar transações do Firestore no Dashboard:', error);
+        setLoading(false);
+        clearTimeout(timer);
+      });
+
+      // Metas
+      const qMetas = query(collection(db, `metas/${user.uid}/items`));
+      unsubMetas = onSnapshot(qMetas, (snapshot) => {
+        setMetas(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Erro ao buscar metas do Firestore no Dashboard:', error);
+      });
+
+      // Diagnóstico / Score
+      unsubDiag = onSnapshot(doc(db, 'diagnostico', user.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          setDiagnostico(docSnap.data());
+        }
+      }, (error) => {
+        console.error('Erro ao buscar diagnóstico do Firestore no Dashboard:', error);
+      });
+    } catch (err) {
+      console.error('Falha ao inicializar conexões com Firestore no Dashboard:', err);
+      setLoading(false);
+      clearTimeout(timer);
+    }
 
     return () => {
+      clearTimeout(timer);
       unsubTrans();
       unsubMetas();
       unsubDiag();
+      unsubUser();
     };
   }, [user?.uid]);
 
@@ -119,7 +160,21 @@ export function Dashboard() {
     }
   }, [user?.uid, transactions.length, metas.length]);
 
-  // Identifica nome do usuário logado
+  const toggleModo = async () => {
+    if (!user?.uid) return;
+    setChangingModo(true);
+    const novoModo = modo === 'pessoal' ? 'empresarial' : 'pessoal';
+    try {
+      await setDoc(doc(db, 'users', user.uid), { modo: novoModo }, { merge: true });
+      setModo(novoModo);
+    } catch (e) {
+      console.error('Erro ao atualizar modo no Firestore:', e);
+      alert('Erro ao alterar o modo. Tente novamente.');
+    } finally {
+      setChangingModo(false);
+    }
+  };
+
   const userName = user?.displayName || user?.email?.split('@')[0] || profile?.nome || 'Usuário Demo';
   const userInitials = userName.substring(0, 2).toUpperCase();
 
@@ -149,7 +204,6 @@ export function Dashboard() {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Calcula receitas e despesas do mês atual e saldo
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -185,7 +239,6 @@ export function Dashboard() {
     }
   });
 
-  // Dados para o gráfico de fluxo de caixa
   const chartData = transactions
     .slice(0, 10).reverse()
     .map((t, idx) => ({
@@ -203,7 +256,6 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
-      {/* Sidebar Mobile Toggle Header */}
       <div className="md:hidden flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -221,7 +273,6 @@ export function Dashboard() {
         </button>
       </div>
 
-      {/* Sidebar (Desktop & Mobile) */}
       <aside
         className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${
           mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
@@ -275,7 +326,6 @@ export function Dashboard() {
         </div>
       </aside>
 
-      {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
@@ -283,7 +333,6 @@ export function Dashboard() {
         />
       )}
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950">
         <header className="h-20 px-6 lg:px-10 border-b border-gray-900 flex items-center justify-between bg-gray-950/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1 max-w-md">
@@ -299,6 +348,21 @@ export function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Botão de Troca de Modo Pessoal / Empresarial */}
+            <button
+              onClick={toggleModo}
+              disabled={changingModo}
+              title="Clique para alternar entre modo Pessoal e Empresarial"
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all shadow-sm ${
+                modo === 'empresarial'
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-indigo-500/50 shadow-md shadow-indigo-500/20'
+                  : 'bg-gray-900 text-gray-200 border-gray-800 hover:border-gray-700'
+              }`}
+            >
+              <Briefcase className={`w-4 h-4 transition-transform ${modo === 'empresarial' ? 'text-white scale-110' : 'text-indigo-400'}`} />
+              <span className="capitalize tracking-wide">Modo {modo}</span>
+            </button>
+
             <div className="hidden lg:flex items-center mr-2 min-w-[160px] bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-800">
               <HeaderXPBar xp={profile?.xp || 0} showBar={true} />
             </div>
@@ -332,15 +396,21 @@ export function Dashboard() {
           </div>
         </header>
 
-        {/* Dashboard Content */}
         <div className="flex-1 p-6 lg:p-10 space-y-8 max-w-7xl w-full mx-auto overflow-y-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-900">
             <div>
-              <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                Olá, {userName} 👋
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                  Olá, {userName} 👋
+                </h2>
+                <span className={`px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
+                  modo === 'empresarial' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                }`}>
+                  {modo}
+                </span>
+              </div>
               <p className="text-sm text-gray-400 mt-1">
-                Aqui está o resumo financeiro da sua conta neste mês.
+                Aqui está o resumo financeiro da sua conta {modo === 'empresarial' ? 'corporativa' : 'pessoal'} neste mês.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -351,81 +421,158 @@ export function Dashboard() {
                 Importar Extrato
               </button>
               <button 
-                onClick={() => setIsNewTxModalOpen(true)}
+                onClick={() => setIsModalOpen(true)}
                 className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
               >
-                <span>+ Nova Transação</span>
+                <Plus className="w-4 h-4" />
+                <span>Nova Transação</span>
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Saldo Total</span>
-                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400">
-                  <Wallet className="w-5 h-5" />
+          {/* Renderização dos Cards Baseada no Modo */}
+          {modo === 'empresarial' ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Faturamento */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Faturamento (Mês)</span>
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-white tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(receitasMes)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Empresarial</span>
+                    </span>
+                    <span className="text-gray-500">receita bruta</span>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className="text-3xl font-extrabold text-white tracking-tight">
-                  {loading ? 'Carregando...' : formatCurrency(saldoTotal)}
-                </h3>
-                <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
-                  <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                    <span>Em tempo real</span>
-                  </span>
-                  <span className="text-gray-500">Firestore sync</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-emerald-500/50 transition-all duration-300">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Receitas do Mês</span>
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
-                  <TrendingUp className="w-5 h-5" />
+              {/* Margem */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-emerald-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Margem Líquida</span>
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(receitasMes - despesasMes)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>
+                        {receitasMes > 0 ? (((receitasMes - despesasMes) / receitasMes) * 100).toFixed(1) + '%' : '0%'}
+                      </span>
+                    </span>
+                    <span className="text-gray-500">lucro operacional</span>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
-                  {loading ? 'Carregando...' : formatCurrency(receitasMes)}
-                </h3>
-                <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
-                  <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                    <span>Mês atual</span>
-                  </span>
-                  <span className="text-gray-500">meta de receita</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-rose-500/50 transition-all duration-300">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Despesas do Mês</span>
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400">
-                  <TrendingDown className="w-5 h-5" />
+              {/* Capital de Giro */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-purple-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-purple-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Capital de Giro</span>
+                  <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-purple-400">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-3xl font-extrabold text-rose-400 tracking-tight">
-                  {loading ? 'Carregando...' : formatCurrency(despesasMes)}
-                </h3>
-                <div className="flex items-center gap-2 mt-3 text-xs text-rose-400 font-medium">
-                  <span className="flex items-center gap-0.5 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                    <ArrowDownLeft className="w-3.5 h-3.5" />
-                    <span>Mês atual</span>
-                  </span>
-                  <span className="text-gray-500">dentro do orçamento</span>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-purple-400 tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(saldoTotal)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-purple-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Disponível</span>
+                    </span>
+                    <span className="text-gray-500">em caixa / bancos</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Saldo Total</span>
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-white tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(saldoTotal)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Em tempo real</span>
+                    </span>
+                    <span className="text-gray-500">Firestore sync</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-emerald-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Receitas do Mês</span>
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(receitasMes)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Mês atual</span>
+                    </span>
+                    <span className="text-gray-500">meta de receita</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-rose-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Despesas do Mês</span>
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400">
+                    <TrendingDown className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-rose-400 tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(despesasMes)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-rose-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                      <ArrowDownLeft className="w-3.5 h-3.5" />
+                      <span>Mês atual</span>
+                    </span>
+                    <span className="text-gray-500">dentro do orçamento</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <AlertasInteligentes alertas={alertasFlash} />
 
@@ -515,11 +662,11 @@ export function Dashboard() {
         </div>
       </main>
 
-      {user?.uid && (
+      {isModalOpen && (
         <NewTransactionModal
-          isOpen={isNewTxModalOpen}
-          onClose={() => setIsNewTxModalOpen(false)}
-          userId={user.uid}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          userId={user?.uid || 'demo'}
         />
       )}
     </div>
