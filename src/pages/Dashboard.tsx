@@ -43,7 +43,7 @@ export function Dashboard() {
   const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
 
-  // Estado do Modo (pessoal | empresarial)
+  // Estado do Modo (pessoal | empresarial) com fallback padrão 'pessoal'
   const [modo, setModo] = useState<'pessoal' | 'empresarial'>('pessoal');
   const [changingModo, setChangingModo] = useState(false);
 
@@ -76,10 +76,12 @@ export function Dashboard() {
     let unsubUser = () => {};
 
     try {
-      // Perfil/Modo do Usuário (users/{userId})
+      // Perfil/Modo do Usuário em users/{userId}
       unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
         if (docSnap.exists() && docSnap.data().modo) {
           setModo(docSnap.data().modo);
+        } else {
+          setModo('pessoal');
         }
       }, (error) => {
         console.error('Erro ao buscar perfil/modo do usuário no Firestore:', error);
@@ -160,10 +162,9 @@ export function Dashboard() {
     }
   }, [user?.uid, transactions.length, metas.length]);
 
-  const toggleModo = async () => {
-    if (!user?.uid) return;
+  const setModoNoFirestore = async (novoModo: 'pessoal' | 'empresarial') => {
+    if (!user?.uid || novoModo === modo) return;
     setChangingModo(true);
-    const novoModo = modo === 'pessoal' ? 'empresarial' : 'pessoal';
     try {
       await setDoc(doc(db, 'users', user.uid), { modo: novoModo }, { merge: true });
       setModo(novoModo);
@@ -348,20 +349,33 @@ export function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Botão de Troca de Modo Pessoal / Empresarial */}
-            <button
-              onClick={toggleModo}
-              disabled={changingModo}
-              title="Clique para alternar entre modo Pessoal e Empresarial"
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all shadow-sm ${
-                modo === 'empresarial'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-indigo-500/50 shadow-md shadow-indigo-500/20'
-                  : 'bg-gray-900 text-gray-200 border-gray-800 hover:border-gray-700'
-              }`}
-            >
-              <Briefcase className={`w-4 h-4 transition-transform ${modo === 'empresarial' ? 'text-white scale-110' : 'text-indigo-400'}`} />
-              <span className="capitalize tracking-wide">Modo {modo}</span>
-            </button>
+            {/* Toggle Segmentado de Modo Pessoal e Empresarial */}
+            <div className="flex items-center p-1 bg-gray-900 border border-gray-800 rounded-2xl shadow-inner">
+              <button
+                onClick={() => setModoNoFirestore('pessoal')}
+                disabled={changingModo || modo === 'pessoal'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  modo === 'pessoal'
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Pessoal</span>
+              </button>
+              <button
+                onClick={() => setModoNoFirestore('empresarial')}
+                disabled={changingModo || modo === 'empresarial'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  modo === 'empresarial'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Empresarial</span>
+              </button>
+            </div>
 
             <div className="hidden lg:flex items-center mr-2 min-w-[160px] bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-800">
               <HeaderXPBar xp={profile?.xp || 0} showBar={true} />
@@ -456,11 +470,11 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* Margem */}
+              {/* Margem de Lucro */}
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-emerald-500/50 transition-all duration-300">
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Margem Líquida</span>
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Margem de Lucro</span>
                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
                     <Wallet className="w-5 h-5" />
                   </div>
@@ -476,7 +490,7 @@ export function Dashboard() {
                         {receitasMes > 0 ? (((receitasMes - despesasMes) / receitasMes) * 100).toFixed(1) + '%' : '0%'}
                       </span>
                     </span>
-                    <span className="text-gray-500">lucro operacional</span>
+                    <span className="text-gray-500">lucro líquido</span>
                   </div>
                 </div>
               </div>
