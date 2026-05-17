@@ -27,15 +27,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   }, [profile]);
 
   const checkAccess = (requiredPlan: PlanType, feature?: string): boolean => {
-    const plansWeight = { 'Free': 0, 'Pro': 1, 'Empresarial': 2 };
-    
-    if (plansWeight[plan] >= plansWeight[requiredPlan]) {
-      return true;
-    }
-    
-    if (feature) setBlockedFeature(feature);
-    setIsUpgradeModalOpen(true);
-    return false;
+    return true; // Libera todas as features por enquanto
   };
 
   const openUpgradeModal = (feature?: string) => {

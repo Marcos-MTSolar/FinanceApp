@@ -33,6 +33,16 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    setValor('');
+    setDescricao('');
+    setCategoria('Alimentação');
+    setTipo('despesa');
+    setError('');
+    setLoading(false);
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valor || isNaN(Number(valor)) || Number(valor) <= 0) {
@@ -65,10 +75,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
       await addXp(userId, 10); // +10 XP por transação
 
       // Reset dos campos e fecha o modal
-      setValor('');
-      setDescricao('');
-      setLoading(false);
-      onClose();
+      handleClose();
     } catch (err: any) {
       console.error('Erro ao salvar transação:', err);
       setError('Erro ao salvar transação. Tente novamente.');
@@ -88,7 +95,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
             <p className="text-xs text-gray-400 mt-1">Registre uma nova entrada ou saída na sua conta</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 text-gray-400 hover:text-white rounded-xl bg-gray-800/60 hover:bg-gray-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -206,7 +213,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
           <div className="flex items-center gap-3 pt-4 border-t border-gray-800/80">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={loading}
               className="flex-1 py-3 px-5 bg-gray-950 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 font-semibold text-xs text-gray-300 rounded-2xl transition-all"
             >

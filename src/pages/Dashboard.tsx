@@ -93,15 +93,16 @@ export function Dashboard() {
       // Transações filtradas pelo modo
       const qTrans = query(
         collection(db, `transacoes/${user.uid}/items`),
-        where('modo', '==', modo),
-        orderBy('data', 'desc')
+        where('modo', '==', modo)
       );
       
       const timeout = setTimeout(() => setLoading(false), 5000);
       
       unsubTrans = onSnapshot(qTrans, (snapshot) => {
         clearTimeout(timeout);
-        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const list = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
         setTransactions(list);
         setLoading(false);
       }, (error) => {

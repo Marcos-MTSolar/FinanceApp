@@ -80,11 +80,13 @@ export function Transacoes() {
     try {
       const q = query(
         collection(db, `transacoes/${user.uid}/items`),
-        orderBy('data', 'desc')
+        where('modo', '==', modo)
       );
 
       unsubscribe = onSnapshot(q, (snapshot) => {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const list = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
         setTransactions(list);
         setLoading(false);
         clearTimeout(timer);
