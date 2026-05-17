@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
+import { useAuth } from '../hooks/useAuth';
+import { HeaderXPBar } from '../components/HeaderXPBar';
+import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } from '../components/Dashboard';
+import { NewTransactionModal } from '../components/NewTransactionModal';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -18,15 +22,23 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Menu,
-  X
+  X,
+  Upload,
+  MessageCircle
 } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [metas, setMetas] = useState<any[]>([]);
+  const [diagnostico, setDiagnostico] = useState<any>(null);
+  const [alertasFlash, setAlertasFlash] = useState<string[]>([]);
+  const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,17 +51,19 @@ export function Dashboard() {
   useEffect(() => {
     if (!user?.uid) {
       setTransactions([]);
+      setMetas([]);
+      setDiagnostico(null);
       setLoading(false);
       return;
     }
 
-    const q = query(
+    // Transações
+    const qTrans = query(
       collection(db, `transacoes/${user.uid}/items`),
       orderBy('data', 'desc')
     );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubTrans = onSnapshot(qTrans, (snapshot) => {
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setTransactions(list);
       setLoading(false);
     }, (error) => {
@@ -57,11 +71,56 @@ export function Dashboard() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Metas
+    const qMetas = query(collection(db, `metas/${user.uid}/items`));
+    const unsubMetas = onSnapshot(qMetas, (snapshot) => {
+      setMetas(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // Diagnóstico / Score
+    const unsubDiag = onSnapshot(doc(db, 'diagnostico', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setDiagnostico(docSnap.data());
+      }
+    });
+
+    return () => {
+      unsubTrans();
+      unsubMetas();
+      unsubDiag();
+    };
   }, [user?.uid]);
 
-  // Identifica nome do usuário logado (ou fallback)
-  const userName = user?.displayName || user?.email?.split('@')[0] || 'Usuário Demo';
+  // Alertas Inteligentes
+  useEffect(() => {
+    const generateAlerts = async () => {
+      if (!user?.uid) return;
+      try {
+        const res = await fetch('/api/cron/alertas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            transacoes: transactions.slice(0, 30),
+            metas: metas
+          })
+        });
+        const data = await res.json();
+        if (data.alertas && data.alertas.length > 0) {
+          setAlertasFlash(data.alertas);
+        }
+      } catch (e) {
+        console.error("Failed to fetch smart alerts:", e);
+      }
+    };
+
+    if (transactions.length > 0) {
+      generateAlerts();
+    }
+  }, [user?.uid, transactions.length, metas.length]);
+
+  // Identifica nome do usuário logado
+  const userName = user?.displayName || user?.email?.split('@')[0] || profile?.nome || 'Usuário Demo';
   const userInitials = userName.substring(0, 2).toUpperCase();
 
   const handleLogout = async () => {
@@ -126,15 +185,24 @@ export function Dashboard() {
     }
   });
 
+  // Dados para o gráfico de fluxo de caixa
+  const chartData = transactions
+    .slice(0, 10).reverse()
+    .map((t, idx) => ({
+      data: new Date(t.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+      saldo: saldoTotal - idx * 100
+    }));
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
+    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
-    { name: 'Perfil', path: '/perfil', icon: User },
+    { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
       {/* Sidebar Mobile Toggle Header */}
       <div className="md:hidden flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-2">
@@ -159,7 +227,6 @@ export function Dashboard() {
           mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
-        {/* Brand */}
         <div className="h-20 flex items-center gap-3 px-8 border-b border-gray-800/60">
           <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
             <Shield className="w-6 h-6 text-white" />
@@ -169,7 +236,6 @@ export function Dashboard() {
           </span>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -196,7 +262,6 @@ export function Dashboard() {
           })}
         </nav>
 
-        {/* User Quick Info */}
         <div className="p-4 border-t border-gray-800/80">
           <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-gray-950/50 border border-gray-800/60">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
@@ -220,7 +285,6 @@ export function Dashboard() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950">
-        {/* Top Header */}
         <header className="h-20 px-6 lg:px-10 border-b border-gray-900 flex items-center justify-between bg-gray-950/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <div className="relative w-full hidden sm:block">
@@ -235,6 +299,10 @@ export function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center mr-2 min-w-[160px] bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-800">
+              <HeaderXPBar xp={profile?.xp || 0} showBar={true} />
+            </div>
+
             <button className="relative p-2.5 text-gray-400 hover:text-white rounded-full bg-gray-900 border border-gray-800 hover:border-gray-700 transition-colors">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-gray-950" />
@@ -266,7 +334,6 @@ export function Dashboard() {
 
         {/* Dashboard Content */}
         <div className="flex-1 p-6 lg:p-10 space-y-8 max-w-7xl w-full mx-auto overflow-y-auto">
-          {/* Welcome Banner */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-900">
             <div>
               <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
@@ -277,18 +344,22 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-xs font-semibold rounded-xl transition-all shadow-sm">
-                Exportar Relatório
+              <button 
+                onClick={() => navigate('/importar')}
+                className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-xs font-semibold rounded-xl transition-all shadow-sm"
+              >
+                Importar Extrato
               </button>
-              <button className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5">
+              <button 
+                onClick={() => setIsNewTxModalOpen(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+              >
                 <span>+ Nova Transação</span>
               </button>
             </div>
           </div>
 
-          {/* 3 Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Saldo Total */}
             <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
               <div className="flex items-center justify-between">
@@ -311,7 +382,6 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Receitas do Mês */}
             <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-emerald-500/50 transition-all duration-300">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
               <div className="flex items-center justify-between">
@@ -334,7 +404,6 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Despesas do Mês */}
             <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-rose-500/50 transition-all duration-300">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
               <div className="flex items-center justify-between">
@@ -358,7 +427,18 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Recent Transactions Section */}
+          <AlertasInteligentes alertas={alertasFlash} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo} onImport={() => navigate('/importar')} />
+            </div>
+            <div className="space-y-6">
+              <ScoreGauge score={diagnostico?.score} />
+              <MetasAtivasResumo metas={metas} />
+            </div>
+          </div>
+
           <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20 space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -434,6 +514,14 @@ export function Dashboard() {
           </div>
         </div>
       </main>
+
+      {user?.uid && (
+        <NewTransactionModal
+          isOpen={isNewTxModalOpen}
+          onClose={() => setIsNewTxModalOpen(false)}
+          userId={user.uid}
+        />
+      )}
     </div>
   );
 }

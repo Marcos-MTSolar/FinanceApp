@@ -16,9 +16,160 @@ import { usePlan } from '../hooks/usePlan';
 
 const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+// Subcomponentes Exportados para reuso no Dashboard novo (src/pages/Dashboard.tsx)
+export function ScoreGauge({ score }: { score?: number | string }) {
+  const numericScore = Number(score) || 0;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-300">
+      <div className="absolute top-0 right-0 p-4">
+        <Activity className="w-5 h-5 text-indigo-400 opacity-50 group-hover:scale-110 transition-transform"/>
+      </div>
+      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase mb-3">Seu Score Financeiro</h3>
+      <div className="relative w-32 h-32 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+          <path
+            className="text-gray-100 dark:text-gray-700/60"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none" stroke="currentColor" strokeWidth="3.5"
+          />
+          <path
+            className="text-indigo-500 transition-all duration-1000 ease-out"
+            strokeDasharray={`${numericScore / 10}, 100`}
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none" stroke="currentColor" strokeWidth="3.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute flex flex-col items-center">
+          <span className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+            {score || '--'}
+          </span>
+          <span className="text-[10px] font-semibold text-indigo-400 mt-0.5 uppercase tracking-wider">
+            {numericScore > 700 ? 'Excelente' : numericScore > 500 ? 'Bom' : 'Regular'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AlertasInteligentes({ alertas }: { alertas: string[] }) {
+  if (!alertas || alertas.length === 0) return null;
+  return (
+    <div className="space-y-3 my-4">
+      {alertas.map((alerta, idx) => (
+        <div key={idx} className="bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 rounded-3xl p-5 flex items-start space-x-3.5 shadow-sm">
+          <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 flex-shrink-0">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-200 tracking-tight">Alerta Inteligente (Groq AI)</h4>
+            <p className="text-xs text-indigo-700 dark:text-indigo-300/90 mt-1 leading-relaxed">
+              "{alerta}"
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { chartData: any[]; periodo: number; setPeriodo: (p: any) => void; onImport: () => void; }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h3 className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">Fluxo de Caixa</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Evolução do saldo da conta nos últimos {periodo} dias</p>
+        </div>
+        <div className="flex bg-gray-100 dark:bg-gray-800/80 p-1 rounded-2xl border border-gray-200 dark:border-gray-700/60">
+          {[30, 60, 90].map((d) => (
+            <button 
+              key={d} 
+              onClick={() => setPeriodo(d as any)}
+              className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all ${periodo === d ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+            >
+              {d} dias
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="h-72 w-full pt-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.15} />
+            <XAxis dataKey="data" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} dx={-10} tickFormatter={(val) => `R$ ${val}`} />
+            <RechartsTooltip 
+              formatter={(val: any) => [`R$ ${Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Saldo']}
+              contentStyle={{ backgroundColor: '#111827', borderRadius: '16px', border: '1px solid #374151', color: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.3)' }}
+              labelStyle={{ color: '#9ca3af', fontWeight: 600, marginBottom: '4px' }}
+            />
+            <Line type="monotone" dataKey="saldo" stroke="#4f46e5" strokeWidth={3.5} dot={{ r: 4, strokeWidth: 2, fill: '#4f46e5' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
+        <button 
+          onClick={onImport}
+          className="flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors py-2 px-4 rounded-xl hover:bg-indigo-500/10"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          <span>Importar Extrato com IA</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function MetasAtivasResumo({ metas }: { metas: any[] }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="font-bold text-lg tracking-tight text-gray-900 dark:text-white flex items-center">
+          <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 mr-3">
+            <Target className="w-5 h-5" />
+          </div>
+          <span>Metas Ativas</span>
+        </h3>
+        <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400">
+          {metas.length} em andamento
+        </span>
+      </div>
+      <div className="space-y-5">
+        {metas.slice(0, 3).map((m: any) => {
+          const valorAtual = Number(m.progressoAtual || m.valorAtual || 0);
+          const valorAlvo = Number(m.valorAlvo || 1);
+          const perc = Math.min((valorAtual / valorAlvo) * 100, 100);
+          return (
+            <div key={m.id} className="group">
+              <div className="flex justify-between text-sm mb-1.5 text-gray-700 dark:text-gray-300">
+                <span className="font-semibold group-hover:text-indigo-400 transition-colors">{m.titulo}</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold">{perc.toFixed(0)}%</span>
+              </div>
+              <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden p-0.5 border border-gray-200 dark:border-gray-700/60">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${perc}%` }}></div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex justify-between font-medium">
+                <span>Acumulado: R$ {valorAtual.toLocaleString('pt-BR')}</span>
+                <span>Meta: R$ {valorAlvo.toLocaleString('pt-BR')}</span>
+              </div>
+            </div>
+          );
+        })}
+        {metas.length === 0 && (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-xs font-medium bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            Nenhuma meta ativa cadastrada no momento.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const { user, profile, signOut, switchMode } = useAuth();
-  const { checkAccess, plan } = usePlan();
+  const { checkAccess } = usePlan();
   const navigate = useNavigate();
 
   const [transacoes, setTransacoes] = useState<any[]>([]);
@@ -31,7 +182,6 @@ export function Dashboard() {
     if (!user) return;
     
     if (localStorage.getItem('mock_user')) {
-      // Use mock data
       setTransacoes([
         { id: '1', tipo: 'receita', valor: 8500, descricao: 'Salário Mock', data: new Date().toISOString(), categoria: 'Renda Fixa' },
         { id: '2', tipo: 'despesa', valor: 2500, descricao: 'Aluguel', data: new Date().toISOString(), categoria: 'Moradia' },
@@ -40,28 +190,24 @@ export function Dashboard() {
       setMetas([
         { id: 'm1', titulo: 'Viagem', progresso: 50, status: 'ativa', valorAlvo: 5000, progressoAtual: 2500 }
       ]);
-      setDiagnostico({ scoreFinancas: 850, perfil: 'Conservador' });
+      setDiagnostico({ score: 850, perfil: 'Conservador' });
       return;
     }
 
-    // Transações Realtime
     const qTransacoes = query(collection(db, `transacoes/${user.uid}/items`), orderBy('data', 'desc'));
     const unsubTrans = onSnapshot(qTransacoes, (snapshot) => {
       setTransacoes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // Metas Realtime
-    const qMetas = query(collection(db, `metas/${user.uid}/lista`));
+    const qMetas = query(collection(db, `metas/${user.uid}/items`));
     const unsubMetas = onSnapshot(qMetas, (snapshot) => {
       setMetas(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // Diagnóstico Realtime
     const unsubDiag = onSnapshot(doc(db, 'diagnostico', user.uid), (doc) => {
       if (doc.exists()) setDiagnostico(doc.data());
     });
 
-    // Empresarial Realtime
     const unsubEmp = onSnapshot(doc(db, 'empresarial', user.uid), (doc) => {
       if (doc.exists()) setEmpresarial(doc.data());
     });
@@ -77,7 +223,6 @@ export function Dashboard() {
   const [alertasFlash, setAlertasFlash] = useState<string[]>([]);
   
   useEffect(() => {
-     // Request mock background alert processing upon opening dashboard (Simulation of Daily Cron)
      const generateAlerts = async () => {
        if (!user?.uid) return;
        try {
@@ -147,21 +292,18 @@ export function Dashboard() {
 
   const isPessoal = profile.modo === 'pessoal';
 
-  // Cálculos Básicos
   const receitas = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
   const despesas = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + Math.abs(t.valor), 0);
   const saldoAtual = receitas - despesas;
   const margemLiquida = receitas > 0 ? ((receitas - despesas) / receitas) * 100 : 0;
 
-  // Cálculos de Gráfico (mock agrupado por dia)
   const chartData = transacoes
-    .slice(0, 10).reverse() // fallback para visualização
+    .slice(0, 10).reverse()
     .map((t, idx) => ({
       data: new Date(t.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      saldo: saldoAtual - idx * 100 // mock simples para ter variação visual no gráfico
+      saldo: saldoAtual - idx * 100
     }));
 
-  // Top Despesas (Pie Chart)
   const despesasPorCategoria = transacoes
     .filter(t => t.tipo === 'despesa')
     .reduce((acc: any, t) => {
@@ -172,7 +314,7 @@ export function Dashboard() {
   const pieData = Object.keys(despesasPorCategoria)
     .map(key => ({ name: key, value: despesasPorCategoria[key] }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 3); // top 3
+    .slice(0, 3);
 
   const handleLogout = async () => {
     await signOut();
@@ -181,8 +323,6 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
-      
-      {/* HEADER */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -198,7 +338,7 @@ export function Dashboard() {
                 </span>
                 <span className="text-gray-300 dark:text-gray-600 hidden md:inline">|</span>
                 <div className="hidden md:block w-48">
-                  <HeaderXPBar xp={profile.xp} />
+                  <HeaderXPBar xp={profile.xp || 0} />
                 </div>
               </div>
             </div>
@@ -234,47 +374,15 @@ export function Dashboard() {
             </button>
           </div>
         </div>
-        {/* Progress Bar (XP Demo) */}
         <div className="w-full h-1 bg-gray-200 dark:bg-gray-700">
           <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: '65%' }}></div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
-        {/* TOP ROW: Score & Resumo Geral */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
-          {/* Card Score Gauage */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4">
-              <Activity className="w-5 h-5 text-indigo-400 opacity-50"/>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Seu Score Financeiro</h3>
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-gray-200 dark:text-gray-700"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none" stroke="currentColor" strokeWidth="3"
-                />
-                <path
-                  className="text-indigo-500"
-                  strokeDasharray={`${(diagnostico?.score || 0) / 10}, 100`}
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none" stroke="currentColor" strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <span className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                  {diagnostico?.score || '--'}
-                </span>
-              </div>
-            </div>
-          </div>
+          <ScoreGauge score={diagnostico?.score} />
 
-          {/* Resumo Cards */}
           <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
               <div className="flex items-center text-gray-500 mb-2">
@@ -310,93 +418,18 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Notificações Inteligentes */}
-        {alertasFlash.map((alerta, idx) => (
-          <div key={idx} className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-4 flex items-start space-x-3 mt-4">
-            <AlertCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Alerta Inteligente (Groq AI)</h4>
-              <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
-                "{alerta}"
-              </p>
-            </div>
-          </div>
-        ))}
+        <AlertasInteligentes alertas={alertasFlash} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Gráfico Principal */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-lg tracking-tight">Fluxo de Caixa</h3>
-              <div className="flex space-x-2">
-                {[30, 60, 90].map((d) => (
-                  <button 
-                    key={d} 
-                    onClick={() => setPeriodo(d as any)}
-                    className={`text-xs px-3 py-1 rounded-full font-medium transition ${periodo === d ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}
-                  >
-                    {d} dias
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
-                  <XAxis dataKey="data" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dx={-10} />
-                  <RechartsTooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Line type="monotone" dataKey="saldo" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button 
-                onClick={() => navigate('/importar')}
-                className="flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Importar Extrato (IA)
-              </button>
-            </div>
+          <div className="lg:col-span-2">
+            <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo} onImport={() => navigate('/importar')} />
           </div>
 
-          {/* Cards Específicos do Modo (Coluna Direita) */}
           <div className="space-y-6">
-            
-            {/* Metas Ativas (Comum) */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold text-lg mb-4 tracking-tight flex items-center">
-                <Target className="w-5 h-5 mr-2 text-indigo-500" />
-                Metas Ativas
-              </h3>
-              <div className="space-y-4">
-                {metas.slice(0,2).map((m: any) => {
-                  const perc = Math.min((m.valorAtual / m.valorAlvo) * 100, 100);
-                  return (
-                    <div key={m.id}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{m.titulo}</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">{perc.toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${perc}%` }}></div>
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">R$ {m.valorAtual} de R$ {m.valorAlvo}</div>
-                    </div>
-                  );
-                })}
-                {metas.length === 0 && <p className="text-sm text-gray-500">Nenhuma meta ativa.</p>}
-              </div>
-            </div>
+            <MetasAtivasResumo metas={metas} />
 
-            {/* Painel Específico - Pessoal */}
             {isPessoal && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                 <h3 className="font-bold text-lg mb-4 tracking-tight">Top Despesas</h3>
                 <div className="h-48 w-full relative">
                   {pieData.length > 0 ? (
@@ -433,9 +466,8 @@ export function Dashboard() {
               </div>
             )}
 
-            {/* Painel Específico - Empresarial */}
             {!isPessoal && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                 <h3 className="font-bold text-lg mb-4 tracking-tight">Métricas (Empresa)</h3>
                 
                 <div className="space-y-4">
@@ -476,7 +508,8 @@ export function Dashboard() {
           </div>
         </div>
       </main>
-
     </div>
   );
 }
+
+export default Dashboard;

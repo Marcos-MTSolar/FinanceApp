@@ -8,12 +8,14 @@ import { AuthProvider } from './hooks/useAuth';
 import { PlanProvider } from './hooks/usePlan';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OnboardingWizard } from './components/OnboardingWizard';
-import { Dashboard } from './components/Dashboard';
-import { ImportData } from './components/ImportData';
-import { Metas } from './components/Metas';
-import { FinanceChat } from './components/FinanceChat';
+import { Dashboard } from './pages/Dashboard';
+import { Transacoes } from './pages/Transacoes';
+import { MetasPage } from './pages/MetasPage';
+import { ImportPage } from './pages/ImportPage';
+import { ChatPage } from './pages/ChatPage';
 import { Simulador } from './components/Simulador';
-import { Login } from './components/Login';
+import { Login } from './pages/Login';
+import { FinanceChat } from './components/FinanceChat';
 
 export default function App() {
   return (
@@ -39,10 +41,34 @@ export default function App() {
             }
           />
           <Route
+            path="/transacoes"
+            element={
+              <ProtectedRoute>
+                <Transacoes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/metas"
+            element={
+              <ProtectedRoute>
+                <MetasPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/importar"
             element={
               <ProtectedRoute>
-                <ImportData />
+                <ImportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <ChatPage />
               </ProtectedRoute>
             }
           />
@@ -51,14 +77,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Simulador />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/metas"
-            element={
-              <ProtectedRoute>
-                <Metas />
               </ProtectedRoute>
             }
           />
