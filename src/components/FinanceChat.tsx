@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { MessageCircle, X, Send, Loader2, Bot } from 'lucide-react';
 import { db } from '../lib/firebaseConfig';
+import { getAuth } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { usePlan } from '../hooks/usePlan';
 
@@ -98,7 +99,8 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
       const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
       history.push({ role: 'user', content: userMessage });
 
-      const token = await user?.getIdToken();
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/groq/chat', {
         method: 'POST',
         headers: { 

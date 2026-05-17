@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { Calculator, Target, TrendingUp, HelpCircle, Loader2 } from 'lucide-react';
 import { usePlan } from '../hooks/usePlan';
 import { useAuth } from '../hooks/useAuth';
+import { getAuth } from 'firebase/auth';
 
 export function Simulador() {
   const { user } = useAuth();
@@ -87,7 +88,8 @@ export function Simulador() {
       scenarioStr = "Em quanto tempo quito minha dívida e quanto pagarei de juros?";
     }
 
-    const token = await user?.getIdToken();
+    const auth = getAuth();
+    const token = await auth.currentUser?.getIdToken();
     try {
       const gRes = await fetch('/api/groq/simulador', {
         method: 'POST',

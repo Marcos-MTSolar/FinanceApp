@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
+import { getAuth } from 'firebase/auth';
 import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -257,7 +258,8 @@ export function Dashboard() {
       const despesasPDF = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + Math.abs(t.valor), 0);
       const balancoPDF = receitasPDF - despesasPDF;
 
-      const token = await user?.getIdToken();
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/relatorio', {
         method: 'POST',
         headers: {

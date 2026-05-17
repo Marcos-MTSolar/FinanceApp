@@ -14,7 +14,8 @@ import {
   MessageCircle, 
   Shield, 
   Menu, 
-  X
+  X,
+  Trophy
 } from 'lucide-react';
 
 export function MetasPage() {
@@ -50,6 +51,7 @@ export function MetasPage() {
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
+    { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
   return (

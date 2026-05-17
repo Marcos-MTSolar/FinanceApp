@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
+import { addXp } from '../lib/gamification';
 
 interface NewTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  modo: 'pessoal' | 'empresarial';
 }
 
 const CATEGORIES = [
@@ -20,7 +22,7 @@ const CATEGORIES = [
   'Outros'
 ];
 
-export function NewTransactionModal({ isOpen, onClose, userId }: NewTransactionModalProps) {
+export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransactionModalProps) {
   const [tipo, setTipo] = useState<'despesa' | 'receita'>('despesa');
   const [valor, setValor] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -56,8 +58,11 @@ export function NewTransactionModal({ isOpen, onClose, userId }: NewTransactionM
         tipo,
         categoria,
         data: formattedDate,
+        modo,
         criadoEm: new Date().toISOString()
       });
+
+      await addXp(userId, 10); // +10 XP por transação
 
       // Reset dos campos e fecha o modal
       setValor('');

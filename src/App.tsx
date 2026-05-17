@@ -13,6 +13,7 @@ import { Transacoes } from './pages/Transacoes';
 import { MetasPage } from './pages/MetasPage';
 import { ImportPage } from './pages/ImportPage';
 import { ChatPage } from './pages/ChatPage';
+import { NiveisPage } from './pages/NiveisPage';
 import { Simulador } from './components/Simulador';
 import { Login } from './pages/Login';
 import { FinanceChat } from './components/FinanceChat';
@@ -69,6 +70,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ChatPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/niveis"
+              element={
+                <ProtectedRoute>
+                  <NiveisPage />
                 </ProtectedRoute>
               }
             />

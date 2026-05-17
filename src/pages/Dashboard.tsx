@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, setDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { HeaderXPBar } from '../components/HeaderXPBar';
 import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } from '../components/Dashboard';
 import { NewTransactionModal } from '../components/NewTransactionModal';
+import { NotificacoesDropdown, criarNotificacao } from '../components/NotificacoesDropdown';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -26,7 +27,8 @@ import {
   Upload,
   MessageCircle,
   Plus,
-  Briefcase
+  Briefcase,
+  Trophy
 } from 'lucide-react';
 
 export function Dashboard() {
@@ -55,6 +57,23 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
+    const fetchUserMode = async () => {
+      if (!user?.uid) return;
+      try {
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        if (docSnap.exists() && docSnap.data().modo) {
+          setModo(docSnap.data().modo);
+        } else {
+          setModo('pessoal');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar modo do usuário', err);
+      }
+    };
+    fetchUserMode();
+  }, [user?.uid]);
+
+  useEffect(() => {
     if (!user?.uid) {
       setTransactions([]);
       setMetas([]);
@@ -68,23 +87,13 @@ export function Dashboard() {
     let unsubTrans = () => {};
     let unsubMetas = () => {};
     let unsubDiag = () => {};
-    let unsubUser = () => {};
 
     try {
-      // Perfil/Modo do Usuário em users/{userId}
-      unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-        if (docSnap.exists() && docSnap.data().modo) {
-          setModo(docSnap.data().modo);
-        } else {
-          setModo('pessoal');
-        }
-      }, (error) => {
-        console.error('Erro ao buscar perfil/modo do usuário no Firestore:', error);
-      });
 
-      // Transações
+      // Transações filtradas pelo modo
       const qTrans = query(
         collection(db, `transacoes/${user.uid}/items`),
+        where('modo', '==', modo),
         orderBy('data', 'desc')
       );
       
@@ -126,9 +135,8 @@ export function Dashboard() {
       unsubTrans();
       unsubMetas();
       unsubDiag();
-      unsubUser();
     };
-  }, [user?.uid]);
+  }, [user?.uid, modo]);
 
   // Alertas Inteligentes
   useEffect(() => {
@@ -157,6 +165,17 @@ export function Dashboard() {
       generateAlerts();
     }
   }, [user?.uid, transactions.length, metas.length]);
+
+  // Verifica saldo negativo e cria notificação
+  useEffect(() => {
+    if (!user?.uid || transactions.length === 0) return;
+    const receitas = transactions.reduce((acc, t) => t.tipo === 'receita' ? acc + Number(t.valor) : acc, 0);
+    const despesas = transactions.reduce((acc, t) => t.tipo === 'despesa' ? acc + Number(t.valor) : acc, 0);
+    const saldo = receitas - despesas;
+    if (saldo < 0) {
+      criarNotificacao(user.uid, `⚠️ Atenção: seu saldo está negativo (${saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}). Revise seus gastos.`);
+    }
+  }, [user?.uid, transactions.length]);
 
   const setModoNoFirestore = async (novoModo: 'pessoal' | 'empresarial') => {
     if (!user?.uid || novoModo === modo) return;
@@ -249,6 +268,7 @@ export function Dashboard() {
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
+    { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
   return (
@@ -377,10 +397,7 @@ export function Dashboard() {
               <HeaderXPBar xp={profile?.xp || 0} showBar={true} />
             </div>
 
-            <button className="relative p-2.5 text-gray-400 hover:text-white rounded-full bg-gray-900 border border-gray-800 hover:border-gray-700 transition-colors">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-gray-950" />
-            </button>
+            <NotificacoesDropdown userId={user?.uid || ''} />
 
             <div className="h-6 w-px bg-gray-800 hidden sm:block"></div>
 
@@ -677,6 +694,7 @@ export function Dashboard() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           userId={user?.uid || 'demo'}
+          modo={modo}
         />
       )}
     </div>

@@ -23,7 +23,8 @@ import {
   Calendar,
   Tag,
   Upload,
-  MessageCircle
+  MessageCircle,
+  Trophy
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -197,6 +198,7 @@ export function Transacoes() {
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
+    { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
+import { getAuth } from 'firebase/auth';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -73,7 +74,8 @@ export function ImportData() {
       }
 
       setProgressMsg('Classificando com Inteligência Artificial...');
-      const token = await user?.getIdToken();
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
       const classificarRes = await fetch('/api/ia/classificar', {
         method: 'POST',
         headers: { 

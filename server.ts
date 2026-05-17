@@ -4,7 +4,6 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import { Groq } from 'groq-sdk';
-import dotenv from 'dotenv';
 // @ts-ignore
 import * as pdfParseModule from 'pdf-parse';
 import helmet from 'helmet';
@@ -12,8 +11,6 @@ import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import multer from 'multer';
 import { generatePdfStream } from './serverReportGenerator';
-
-dotenv.config();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -273,7 +270,12 @@ Formato esperado: { "transacoes": [...] }`;
 
   // API Route for AI Chat Streaming
   app.post('/api/groq/chat', requireAuth, aiLimiter, async (req, res) => {
-    console.log("GROQ_API_KEY carregada:", !!process.env.GROQ_API_KEY);
+    const keyPresent = !!process.env.GROQ_API_KEY;
+    console.log("[/api/groq/chat] GROQ_API_KEY presente:", keyPresent);
+    if (!keyPresent) {
+      console.error("[/api/groq/chat] GROQ_API_KEY não encontrada. Verifique o arquivo .env.");
+    }
+
     const { messages, context } = req.body;
     
     res.setHeader('Content-Type', 'text/event-stream');
@@ -283,6 +285,7 @@ Formato esperado: { "transacoes": [...] }`;
     const systemPrompt = `Você é um consultor financeiro pessoal. O usuário tem score ${context.score || 'N/A'}, renda ${context.renda || 0}, dívidas de ${context.dividas || 0}, economias de ${context.economias || 0}. Responda em português, de forma direta e prática.`;
 
     try {
+      console.log("[/api/groq/chat] Iniciando chamada ao Groq com", messages?.length, "mensagens");
       const stream = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
@@ -301,8 +304,15 @@ Formato esperado: { "transacoes": [...] }`;
       }
       res.write('data: [DONE]\n\n');
       res.end();
-    } catch (error) {
-      console.error('Chat error no /api/groq/chat:', error);
+    } catch (error: any) {
+      console.error('[/api/groq/chat] ERRO COMPLETO:', {
+        message: error?.message,
+        status: error?.status,
+        code: error?.code,
+        type: error?.type,
+        name: error?.name,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
+      });
       res.write(`data: ${JSON.stringify({ error: 'Erro no servidor: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
       res.end();
     }

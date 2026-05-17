@@ -3,7 +3,6 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
-import { FinanceChat } from '../components/FinanceChat';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -17,8 +16,9 @@ import {
   X,
   Trophy
 } from 'lucide-react';
+import { LEVEL_THRESHOLDS } from '../lib/gamification';
 
-export function ChatPage() {
+export function NiveisPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
@@ -53,6 +53,22 @@ export function ChatPage() {
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
+
+  const currentXp = profile?.xp || 0;
+  
+  let currentLevel = LEVEL_THRESHOLDS[0];
+  let nextLevel = LEVEL_THRESHOLDS[1];
+
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (currentXp >= LEVEL_THRESHOLDS[i].minXp) {
+      currentLevel = LEVEL_THRESHOLDS[i];
+      nextLevel = LEVEL_THRESHOLDS[i + 1] || null;
+    }
+  }
+
+  const progress = nextLevel 
+    ? ((currentXp - currentLevel.minXp) / (nextLevel.minXp - currentLevel.minXp)) * 100 
+    : 100;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
@@ -140,7 +156,7 @@ export function ChatPage() {
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950">
         <header className="h-20 px-6 lg:px-10 border-b border-gray-900 flex items-center justify-between bg-gray-950/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1 max-w-md">
-            <h1 className="text-xl font-bold tracking-tight text-white">Assistente IA</h1>
+            <h1 className="text-xl font-bold tracking-tight text-white">Níveis e Recompensas</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
@@ -166,12 +182,87 @@ export function ChatPage() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 p-6 lg:p-10 max-w-7xl w-full mx-auto overflow-y-auto">
-          <FinanceChat fullPage={true} />
+        <div className="flex-1 p-6 lg:p-10 max-w-5xl w-full mx-auto overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20 mb-8">
+            <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Seu Progresso</h2>
+                <p className="text-gray-400">Complete transações, metas e interações para ganhar XP e subir de nível.</p>
+              </div>
+              <div className="flex items-center gap-6 bg-gray-950 p-6 rounded-2xl border border-gray-800">
+                <div className="w-20 h-20 rounded-full bg-gray-900 border-4 border-indigo-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                  <span className="text-3xl font-black text-white">{currentLevel.level}</span>
+                </div>
+                <div>
+                  <div className="text-sm text-indigo-400 font-bold tracking-wider uppercase mb-1">Nível Atual</div>
+                  <div className={`text-2xl font-bold ${currentLevel.color}`}>{currentLevel.name}</div>
+                  <div className="text-sm font-medium text-gray-400 mt-1">{currentXp} XP Totais</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <div className="flex justify-between text-sm font-medium mb-3">
+                <span className="text-gray-400">Progresso para Nível {nextLevel ? nextLevel.level : currentLevel.level}</span>
+                <span className="text-white">
+                  {currentXp} / {nextLevel ? nextLevel.minXp : currentLevel.minXp} XP
+                </span>
+              </div>
+              <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 relative"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl shadow-black/20">
+            <div className="p-6 lg:p-8 border-b border-gray-800">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+                Tabela de Níveis
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-950 text-gray-400 border-b border-gray-800">
+                  <tr>
+                    <th className="px-6 py-4 font-semibold">Nível</th>
+                    <th className="px-6 py-4 font-semibold">Título</th>
+                    <th className="px-6 py-4 font-semibold">XP Necessário</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {LEVEL_THRESHOLDS.map((level) => {
+                    const isCurrent = level.level === currentLevel.level;
+                    return (
+                      <tr key={level.level} className={`${isCurrent ? 'bg-indigo-900/20' : 'hover:bg-gray-800/50'} transition-colors`}>
+                        <td className="px-6 py-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isCurrent ? 'bg-indigo-600 text-white shadow-[0_0_10px_rgba(79,70,229,0.6)]' : 'bg-gray-800 text-gray-400'}`}>
+                            {level.level}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`font-bold ${level.color}`}>{level.name}</span>
+                          {isCurrent && <span className="ml-3 text-[10px] uppercase font-bold text-indigo-400 bg-indigo-900/40 px-2 py-1 rounded-md">Atual</span>}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-300">
+                          {level.minXp.toLocaleString()} XP
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </main>
     </div>
   );
 }
 
-export default ChatPage;
+export default NiveisPage;

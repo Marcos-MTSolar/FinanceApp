@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
-import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play } from 'lucide-react';
+import { getAuth } from 'firebase/auth';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } from 'firebase/firestore';
+import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2 } from 'lucide-react';
 import { addXp, getLevelInfo } from '../lib/gamification';
+import { criarNotificacao } from './NotificacoesDropdown';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 
@@ -47,7 +49,8 @@ export function Metas() {
     if (!user?.uid) return;
     setAiLoading(true);
     try {
-      const token = await user?.getIdToken();
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/groq/sugerir-meta', {
         method: 'POST',
         headers: { 
@@ -72,37 +75,50 @@ export function Metas() {
   };
 
   const handleCreate = async () => {
-    if (!user?.uid || !novaMeta.titulo) return;
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid || !novaMeta.titulo) return;
     try {
-      await addDoc(collection(db, `metas/${user.uid}/items`), {
+      await addDoc(collection(db, `metas/${uid}/items`), {
         ...novaMeta,
         valorAlvo: Number(novaMeta.valorAlvo),
         progressoAtual: 0,
         status: 'ativa',
-        userId: user.uid,
+        userId: uid,
         criadoEm: serverTimestamp()
       });
       setIsModalOpen(false);
       setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
     } catch (error) {
-      console.error("Erro ao cadastrar meta no Firestore:", error);
+      console.error("Erro ao cadastrar meta no Firestore (verifique permissões):", error);
       alert("Erro ao criar meta. Verifique permissões ou conexão com o Firestore.");
     }
   };
 
   const handleComplete = async (id: string) => {
-    if (!user?.uid) return;
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     try {
-      await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
+      // Busca o título da meta para a notificação
+      const metaAtual = metas.find(m => m.id === id);
+      await updateDoc(doc(db, `metas/${uid}/items`, id), {
         status: 'concluida',
         concluidoEm: serverTimestamp()
       });
 
-      const xpResult = await addXp(user.uid, 500);
+      // Notificação: meta atingida
+      if (metaAtual?.titulo) {
+        await criarNotificacao(uid, `🎉 Parabéns! Você atingiu a meta "${metaAtual.titulo}"!`);
+      }
+
+      const xpResult = await addXp(uid, 500);
 
       setShowConfetti(true);
       if (xpResult?.leveledUp) {
         setLevelUpMsg(`Parabéns! Você alcançou o Nível ${xpResult.nivel}: ${xpResult.name}`);
+        // Notificação: subiu de nível
+        await criarNotificacao(uid, `⬆️ Você subiu para o Nível ${xpResult.nivel}: ${xpResult.name}!`);
       }
       
       setTimeout(() => {
@@ -114,14 +130,16 @@ export function Metas() {
     }
   };
 
-  const handleAbandon = async (id: string) => {
-    if (!user?.uid) return;
+  const handleDelete = async (id: string) => {
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    if (!window.confirm("Deseja realmente excluir esta meta permanentemente?")) return;
     try {
-      await updateDoc(doc(db, `metas/${user.uid}/items`, id), {
-        status: 'abandonada'
-      });
+      await deleteDoc(doc(db, `metas/${uid}/items`, id));
     } catch (error) {
-      console.error("Erro ao abandonar meta no Firestore:", error);
+      console.error("Erro ao excluir meta no Firestore:", error);
+      alert("Erro ao excluir. Verifique permissões.");
     }
   };
 
@@ -300,11 +318,11 @@ export function Metas() {
                     <CheckCircle className="w-4 h-4 mr-1.5" /> Concluir (+500 XP)
                   </button>
                   <button 
-                    onClick={() => handleAbandon(m.id)}
+                    onClick={() => handleDelete(m.id)}
                     className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 rounded-xl transition"
-                    title="Abandonar Meta"
+                    title="Excluir Meta"
                   >
-                    <XCircle className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -323,6 +341,7 @@ export function Metas() {
                    <th className="px-6 py-3 font-semibold">Meta</th>
                    <th className="px-6 py-3 font-semibold">Valor Alvo</th>
                    <th className="px-6 py-3 font-semibold">Status</th>
+                   <th className="px-6 py-3 font-semibold text-right">Ações</th>
                  </tr>
                </thead>
                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -337,6 +356,15 @@ export function Metas() {
                        }`}>
                          {m.status === 'concluida' ? 'Concluída' : 'Abandonada'}
                        </span>
+                     </td>
+                     <td className="px-6 py-4 text-right">
+                       <button 
+                         onClick={() => handleDelete(m.id)}
+                         className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 rounded-xl transition"
+                         title="Excluir Meta"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
                      </td>
                    </tr>
                  ))}

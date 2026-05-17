@@ -7,7 +7,11 @@ export const LEVEL_THRESHOLDS = [
   { level: 3, name: 'Planejador', minXp: 1500, color: 'text-indigo-500' },
   { level: 4, name: 'Estrategista', minXp: 3000, color: 'text-purple-500' },
   { level: 5, name: 'Investidor', minXp: 6000, color: 'text-orange-500' },
-  { level: 6, name: 'Independente', minXp: 10000, color: 'text-yellow-500' }
+  { level: 6, name: 'Independente', minXp: 10000, color: 'text-yellow-500' },
+  { level: 7, name: 'Visionário', minXp: 15000, color: 'text-emerald-500' },
+  { level: 8, name: 'Mestre Financeiro', minXp: 25000, color: 'text-cyan-500' },
+  { level: 9, name: 'Magnata', minXp: 40000, color: 'text-rose-500' },
+  { level: 10, name: 'Lenda', minXp: 70000, color: 'text-amber-500' }
 ];
 
 export const getLevelInfo = (xp: number) => {
