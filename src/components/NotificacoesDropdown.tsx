@@ -28,10 +28,15 @@ export function NotificacoesDropdown({ userId }: NotificacoesCloakProps) {
       orderBy('criadoEm', 'desc')
     );
 
-    const unsub = onSnapshot(q, (snap) => {
+    let unsub: () => void;
+
+    unsub = onSnapshot(q, (snap) => {
       setNotificacoes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notificacao)));
     }, (err) => {
-      console.error('Erro ao escutar notificações:', err);
+      // Cancela o listener imediatamente para evitar loop infinito de tentativas.
+      // Isso ocorre quando o índice do Firestore ainda não foi criado/propagado.
+      console.error('Erro no listener de notificações — listener cancelado para evitar loop:', err.message);
+      if (unsub) unsub();
     });
 
     return () => unsub();
