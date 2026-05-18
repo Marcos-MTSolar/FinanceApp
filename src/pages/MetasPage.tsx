@@ -15,7 +15,13 @@ import {
   Shield, 
   Menu, 
   X,
-  Trophy
+  Trophy,
+  HelpCircle,
+  ChevronDown,
+  Lightbulb,
+  CalendarClock,
+  CheckCircle2,
+  Calculator
 } from 'lucide-react';
 
 export function MetasPage() {
@@ -24,6 +30,7 @@ export function MetasPage() {
   const { profile } = useAuth();
   const [user, setUser] = useState(auth.currentUser);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -166,7 +173,108 @@ export function MetasPage() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 p-6 lg:p-10 max-w-7xl w-full mx-auto overflow-y-auto">
+        <div className="flex-1 p-6 lg:p-10 max-w-7xl w-full mx-auto overflow-y-auto space-y-5">
+
+          {/* ── Painel Informativo Retrátil ───────────────────────────── */}
+          <div className="bg-gray-900 border border-indigo-500/20 rounded-3xl shadow-xl shadow-black/20 overflow-hidden">
+            {/* Cabeçalho do painel — sempre visível */}
+            <button
+              onClick={() => setHelpOpen(!helpOpen)}
+              className="w-full flex items-center justify-between p-5 lg:p-6 text-left group hover:bg-indigo-500/5 transition-colors duration-200"
+              aria-expanded={helpOpen}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex-shrink-0">
+                  <HelpCircle className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-white block">Como funcionam as metas?</span>
+                  <span className="text-xs text-gray-400">{helpOpen ? 'Clique para recolher' : 'Clique para expandir e entender o sistema'}</span>
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-5 h-5 text-indigo-400 flex-shrink-0 transition-transform duration-300 ${
+                  helpOpen ? 'rotate-180' : 'rotate-0'
+                }`}
+              />
+            </button>
+
+            {/* Conteúdo expansível */}
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                helpOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="px-5 pb-6 lg:px-6 lg:pb-7 border-t border-gray-800 pt-5 space-y-4">
+
+                {/* O que é uma meta */}
+                <div className="flex items-start gap-3 p-4 bg-gray-950 border border-gray-800 rounded-2xl">
+                  <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex-shrink-0 mt-0.5">
+                    <Target className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white mb-1">O que é uma meta?</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Uma meta é um <span className="text-indigo-300 font-semibold">objetivo financeiro com valor alvo e prazo</span>. Você define quanto quer guardar ou conquistar e até quando. O FinanceAI acompanha seu progresso automaticamente com base nas suas transações.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Como é cumprida */}
+                <div className="flex items-start gap-3 p-4 bg-gray-950 border border-gray-800 rounded-2xl">
+                  <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex-shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white mb-1">Como uma meta é cumprida?</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Você pode <span className="text-emerald-300 font-semibold">registrar aportes manualmente</span> informando o valor separado. Quando o total aportado atingir o valor alvo, a meta aparece como concluída — e você ganha <span className="text-yellow-300 font-semibold">+50 XP</span> de recompensa!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cálculo mensal */}
+                <div className="flex items-start gap-3 p-4 bg-gray-950 border border-gray-800 rounded-2xl">
+                  <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl flex-shrink-0 mt-0.5">
+                    <Calculator className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white mb-1">Quanto separar por mês?</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Fórmula simples: <span className="text-amber-300 font-semibold">Valor da meta ÷ Número de meses até o prazo</span>. Divida o valor total pelo tempo disponível e você sabe exatamente quanto guardar a cada mês para chegar lá no prazo.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Exemplo prático */}
+                <div className="flex items-start gap-3 p-4 bg-indigo-950/40 border border-indigo-500/25 rounded-2xl">
+                  <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex-shrink-0 mt-0.5">
+                    <Lightbulb className="w-4 h-4 text-indigo-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-indigo-200 mb-2">Exemplo prático</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <CalendarClock className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                        <span className="text-gray-300">Meta: <span className="font-semibold text-white">Comprar tênus — R$&nbsp;200,00</span> em <span className="font-semibold text-white">2 meses</span></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Calculator className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span className="text-gray-300">Cálculo: <span className="font-semibold text-white">R$&nbsp;200 ÷ 2 meses</span> = separe <span className="text-emerald-300 font-bold">R$&nbsp;100,00 por mês</span></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                        <span className="text-gray-300">Ao concluir: ganhe <span className="text-yellow-300 font-bold">+50 XP</span> de recompensa!</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* ── Card de Metas ──────────────────────────────────── */}
           <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
             <Metas />
           </div>

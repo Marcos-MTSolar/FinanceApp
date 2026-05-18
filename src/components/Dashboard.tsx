@@ -19,13 +19,39 @@ const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 // Subcomponentes Exportados para reuso no Dashboard novo (src/pages/Dashboard.tsx)
 export function ScoreGauge({ score }: { score?: number | string }) {
-  const numericScore = Number(score) || 0;
+  const [showInfo, setShowInfo] = React.useState(false);
+  const numericScore = Math.min(Math.max(Number(score) || 0, 0), 100);
+
+  // Faixas de score
+  const getScoreConfig = (s: number) => {
+    if (s >= 70) return { label: 'Saudável',  color: 'text-emerald-400', stroke: '#10b981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', dot: 'bg-emerald-400' };
+    if (s >= 40) return { label: 'Atenção',   color: 'text-amber-400',   stroke: '#f59e0b', bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   dot: 'bg-amber-400' };
+    return             { label: 'Crítico',    color: 'text-rose-400',    stroke: '#ef4444', bg: 'bg-rose-500/10',    border: 'border-rose-500/20',    dot: 'bg-rose-400' };
+  };
+  const cfg = getScoreConfig(numericScore);
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-300">
       <div className="absolute top-0 right-0 p-4">
         <Activity className="w-5 h-5 text-indigo-400 opacity-50 group-hover:scale-110 transition-transform"/>
       </div>
-      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase mb-3">Seu Score Financeiro</h3>
+
+      {/* Cabeçalho com botão de info */}
+      <div className="flex items-center gap-1.5 mb-3">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">
+          Score Financeiro
+        </h3>
+        <button
+          onClick={() => setShowInfo(v => !v)}
+          title="Como funciona o score?"
+          className="p-0.5 rounded-full text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors flex-shrink-0"
+          aria-expanded={showInfo}
+        >
+          <AlertCircle className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Gauge SVG */}
       <div className="relative w-32 h-32 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
           <path
@@ -34,25 +60,65 @@ export function ScoreGauge({ score }: { score?: number | string }) {
             fill="none" stroke="currentColor" strokeWidth="3.5"
           />
           <path
-            className="text-indigo-500 transition-all duration-1000 ease-out"
-            strokeDasharray={`${numericScore / 10}, 100`}
+            strokeDasharray={`${numericScore}, 100`}
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none" stroke="currentColor" strokeWidth="3.5"
+            fill="none" stroke={cfg.stroke} strokeWidth="3.5"
             strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 1s ease-out' }}
           />
         </svg>
         <div className="absolute flex flex-col items-center">
           <span className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            {score || '--'}
+            {score ?? '--'}
           </span>
-          <span className="text-[10px] font-semibold text-indigo-400 mt-0.5 uppercase tracking-wider">
-            {numericScore > 700 ? 'Excelente' : numericScore > 500 ? 'Bom' : 'Regular'}
+          <span className={`text-[10px] font-bold mt-0.5 uppercase tracking-wider ${cfg.color}`}>
+            {cfg.label}
           </span>
+        </div>
+      </div>
+
+      {/* Painel informativo expansível */}
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out w-full ${showInfo ? 'max-h-[420px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-3 text-left">
+
+          {/* Escala */}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+            O score vai de <span className="font-bold text-white">0 a 100</span> e reflete sua saúde financeira com base nas respostas do diagnóstico: renda, dívidas, reserva de emergência e hábitos de gasto.
+          </p>
+
+          {/* Faixas */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" />
+              <span className="text-gray-400"><span className="font-bold text-rose-300">0–39</span> · Situação crítica — ação imediata necessária</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+              <span className="text-gray-400"><span className="font-bold text-amber-300">40–69</span> · Atenção — há pontos a melhorar</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+              <span className="text-gray-400"><span className="font-bold text-emerald-300">70–100</span> · Saúde financeira positiva</span>
+            </div>
+          </div>
+
+          {/* Como melhorar */}
+          <div className={`p-3 rounded-xl ${cfg.bg} border ${cfg.border}`}>
+            <p className="text-[10px] font-bold text-gray-300 mb-1.5 uppercase tracking-wider">Como melhorar seu score</p>
+            <ul className="space-y-1 text-[11px] text-gray-400">
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-0.5">▸</span> Quitar dívidas e reduzir endividamento</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-0.5">▸</span> Cumprir metas financeiras cadastradas</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-0.5">▸</span> Manter saldo positivo ao final do mês</li>
+              <li className="flex items-start gap-1.5"><span className="text-emerald-400 mt-0.5">▸</span> Refazer o diagnóstico após melhorias</li>
+            </ul>
+          </div>
+
         </div>
       </div>
     </div>
   );
 }
+
 
 export function AlertasInteligentes({ alertas }: { alertas: string[] }) {
   if (!alertas || alertas.length === 0) return null;

@@ -5,8 +5,12 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  // Em produção (Vercel), usar '/' para paths absolutos nos assets.
+  // Para builds do Capacitor (local), o script build:android passa CAPACITOR=true
+  // para manter './' e preservar o carregamento local de assets no WebView.
+  const isCapacitor = process.env.CAPACITOR === 'true';
   return {
-    base: './',
+    base: isCapacitor ? './' : '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

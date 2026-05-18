@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
 // ── Tabela de níveis (usada em NiveisPage e HeaderXPBar) ─────────────────────
@@ -14,6 +14,25 @@ export const LEVEL_THRESHOLDS = [
   { level: 9,  name: 'Magnata',           minXp: 3600, color: 'text-rose-500' },
   { level: 10, name: 'Lenda',             minXp: 4500, color: 'text-amber-500' },
 ];
+
+// ── Catálogo de eventos de XP (fonte única de verdade para UI e lógica) ───────
+export const XP_EVENTS = {
+  // ── GANHOS ────────────────────────────────────────────────────────────────
+  IMPORTAR_EXTRATO:    { xp: +20, label: 'Importar extrato',                tipo: 'ganho' as const },
+  CADASTRAR_META:      { xp: +15, label: 'Cadastrar nova meta',             tipo: 'ganho' as const },
+  META_CONCLUIDA:      { xp: +50, label: 'Marcar meta como concluída',      tipo: 'ganho' as const },
+  ADICIONAR_RECEITA:   { xp: +10, label: 'Adicionar uma receita',           tipo: 'ganho' as const },
+  DIAGNOSTICO_INICIAL: { xp: +30, label: 'Completar diagnóstico inicial',   tipo: 'ganho' as const },
+  SALDO_POSITIVO_MES:  { xp: +25, label: 'Fechar o mês com saldo positivo', tipo: 'ganho' as const },
+
+  // ── PENALIDADES ──────────────────────────────────────────────────────────
+  EXCESSO_DESPESAS_DIA:     { xp: -15, label: '3+ despesas no mesmo dia após alerta de economia',      tipo: 'perda' as const },
+  SALDO_NEGATIVO_MES:       { xp: -20, label: 'Fechar o mês com saldo negativo',                       tipo: 'perda' as const },
+  EXCESSO_LUXO:             { xp: -10, label: 'Gastos com luxo acima de 40% da renda cadastrada',      tipo: 'perda' as const },
+  INATIVIDADE_COM_METAS:    { xp: -5,  label: '7 dias sem acessar com metas ativas',                   tipo: 'perda' as const },
+} as const;
+
+export type XpEventKey = keyof typeof XP_EVENTS;
 
 // ── Cálculo de nível a partir do XP ──────────────────────────────────────────
 const calcularNivel = (xp: number): number => {
@@ -40,17 +59,181 @@ export const getLevelInfo = (xp: number) => {
   return { currentLevel, nextLevel, progress };
 };
 
-// ── Incrementa XP e persiste no Firestore ────────────────────────────────────
-export const addXp = async (userId: string, xpGanho: number): Promise<void> => {
+// ── Aplica delta de XP (positivo ou negativo) e persiste no Firestore ────────
+// XP mínimo é 0 — o usuário nunca fica negativo, mas pode perder pontos acumulados.
+export const addXp = async (userId: string, xpDelta: number): Promise<void> => {
   if (!userId) return;
   try {
     const docRef  = doc(db, 'users', userId);
     const docSnap = await getDoc(docRef);
     const xpAtual = docSnap.data()?.xp || 0;
-    const novoXp  = xpAtual + xpGanho;
+    const novoXp  = Math.max(0, xpAtual + xpDelta); // nunca abaixo de 0
     const novoNivel = calcularNivel(novoXp);
     await setDoc(docRef, { xp: novoXp, nivel: novoNivel }, { merge: true });
+    if (xpDelta < 0) {
+      console.log(`[gamification] Penalidade aplicada: ${xpDelta} XP → total agora: ${novoXp}`);
+    }
   } catch (err) {
-    console.error('Erro ao adicionar XP:', err);
+    console.error('Erro ao atualizar XP:', err);
+  }
+};
+
+// ── Aplica XP por chave de evento (usa o catálogo XP_EVENTS) ─────────────────
+export const applyXpEvent = async (userId: string, event: XpEventKey): Promise<void> => {
+  const { xp } = XP_EVENTS[event];
+  await addXp(userId, xp);
+};
+
+// ── Helper: data de hoje em YYYY-MM-DD ───────────────────────────────────────
+const hoje = () => new Date().toISOString().slice(0, 10);
+
+// ── Penalidade: verificar saldo do mês (chamar no fim do mês / login) ─────────
+// Lê as transações do mês atual e aplica +25 ou -20 XP conforme o saldo.
+export const verificarSaldoMensal = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  try {
+    const agora = new Date();
+    const anoMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+
+    // Verifica se já foi avaliado este mês para não aplicar duplo
+    const userRef = doc(db, 'users', userId);
+    const userData = (await getDoc(userRef)).data() || {};
+    if (userData.ultimaAvaliacaoSaldo === anoMes) return;
+
+    const snap = await getDocs(
+      query(collection(db, `transacoes/${userId}/items`))
+    );
+
+    let receitas = 0;
+    let despesas = 0;
+
+    snap.docs.forEach(d => {
+      const t = d.data();
+      const dataStr: string = typeof t.data === 'string'
+        ? t.data
+        : (t.data as Timestamp)?.toDate?.()?.toISOString?.()?.slice(0, 10) || '';
+
+      if (!dataStr.startsWith(anoMes)) return;
+      const val = Math.abs(Number(t.valor) || 0);
+      if (t.tipo === 'receita') receitas += val;
+      else despesas += val;
+    });
+
+    const saldo = receitas - despesas;
+    const xpDelta = saldo >= 0 ? XP_EVENTS.SALDO_POSITIVO_MES.xp : XP_EVENTS.SALDO_NEGATIVO_MES.xp;
+    await addXp(userId, xpDelta);
+    await setDoc(userRef, { ultimaAvaliacaoSaldo: anoMes }, { merge: true });
+  } catch (err) {
+    console.error('[gamification] Erro ao verificar saldo mensal:', err);
+  }
+};
+
+// ── Penalidade: excesso de gastos de luxo no mês ─────────────────────────────
+// Calcula se Lazer + Assinatura > 40% da renda cadastrada. Aplica -10 XP se sim.
+export const verificarExcessoLuxo = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userData = (await getDoc(userRef)).data() || {};
+    const renda: number = Number(userData.renda) || 0;
+    if (renda <= 0) return; // sem renda cadastrada, não avalia
+
+    const agora = new Date();
+    const anoMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+    if (userData.ultimaAvaliacaoLuxo === anoMes) return;
+
+    const snap = await getDocs(
+      query(
+        collection(db, `transacoes/${userId}/items`),
+        where('tipo', '==', 'despesa')
+      )
+    );
+
+    let totalLuxo = 0;
+    snap.docs.forEach(d => {
+      const t = d.data();
+      const dataStr: string = typeof t.data === 'string'
+        ? t.data
+        : (t.data as Timestamp)?.toDate?.()?.toISOString?.()?.slice(0, 10) || '';
+      if (!dataStr.startsWith(anoMes)) return;
+      if (['Lazer', 'Assinatura'].includes(t.categoria)) {
+        totalLuxo += Math.abs(Number(t.valor) || 0);
+      }
+    });
+
+    if (totalLuxo > renda * 0.4) {
+      await addXp(userId, XP_EVENTS.EXCESSO_LUXO.xp);
+      await setDoc(userRef, { ultimaAvaliacaoLuxo: anoMes }, { merge: true });
+    }
+  } catch (err) {
+    console.error('[gamification] Erro ao verificar excesso de luxo:', err);
+  }
+};
+
+// ── Penalidade: 3+ despesas no mesmo dia ─────────────────────────────────────
+// Chamada dentro do NewTransactionModal após salvar uma despesa.
+// Conta quantas despesas o usuário já cadastrou hoje. Se >= 3, aplica -15 XP.
+// Aplica apenas uma vez por dia (controla via lastPenalidadeDia no Firestore).
+export const verificarExcessoDespesasDia = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  try {
+    const dataHoje = hoje();
+    const userRef = doc(db, 'users', userId);
+    const userData = (await getDoc(userRef)).data() || {};
+    if (userData.lastPenalidadeDia === dataHoje) return; // já penalizou hoje
+
+    const snap = await getDocs(
+      query(
+        collection(db, `transacoes/${userId}/items`),
+        where('tipo', '==', 'despesa'),
+        where('data', '==', dataHoje)
+      )
+    );
+
+    if (snap.size >= 3) {
+      await addXp(userId, XP_EVENTS.EXCESSO_DESPESAS_DIA.xp);
+      await setDoc(userRef, { lastPenalidadeDia: dataHoje }, { merge: true });
+    }
+  } catch (err) {
+    console.error('[gamification] Erro ao verificar excesso de despesas no dia:', err);
+  }
+};
+
+// ── Penalidade: inatividade com metas ativas ─────────────────────────────────
+// Chamada no login. Se o usuário tem metas ativas E o último acesso foi há 7+ dias,
+// aplica -5 XP. Registra o acesso atual para a próxima verificação.
+export const verificarInatividade = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userData = (await getDoc(userRef)).data() || {};
+
+    // Registra o acesso atual (independente de penalidade)
+    const agora = new Date().toISOString();
+    const ultimoAcesso = userData.ultimoAcesso
+      ? new Date(userData.ultimoAcesso)
+      : null;
+
+    const diasSemAcesso = ultimoAcesso
+      ? Math.floor((Date.now() - ultimoAcesso.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    if (diasSemAcesso >= 7) {
+      // Verifica se há metas ativas
+      const metasSnap = await getDocs(
+        query(
+          collection(db, `metas/${userId}/items`),
+          where('concluida', '==', false)
+        )
+      );
+
+      if (metasSnap.size > 0) {
+        await addXp(userId, XP_EVENTS.INATIVIDADE_COM_METAS.xp);
+      }
+    }
+
+    await setDoc(userRef, { ultimoAcesso: agora }, { merge: true });
+  } catch (err) {
+    console.error('[gamification] Erro ao verificar inatividade:', err);
   }
 };
