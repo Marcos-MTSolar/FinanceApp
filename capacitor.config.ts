@@ -28,6 +28,7 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#030712', // Corresponde ao bg-gray-950 do Tailwind
     loggingBehavior: 'none',    // Desativa logs verbose em produção
+    overScrollMode: 'never'
   },
 };
 
