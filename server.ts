@@ -1,3 +1,14 @@
+// ─── Polyfills para APIs Web usadas pelo pdfjs-dist em ambiente Node/Serverless ───
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  (globalThis as any).DOMMatrix = class DOMMatrix { constructor() {} };
+}
+if (typeof globalThis.DOMPoint === 'undefined') {
+  (globalThis as any).DOMPoint = class DOMPoint { constructor() {} };
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  (globalThis as any).Path2D = class Path2D { constructor() {} };
+}
+
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -204,10 +215,15 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       if (fileBuffer) {
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
-          const pdfParseModule = await import('pdf-parse');
-          const pdfParse = (pdfParseModule as any).default || pdfParseModule;
-          const data = await pdfParse(Buffer.from(fileBuffer));
-          textoBruto = data.text;
+          try {
+            const pdfParseModule = await import('pdf-parse');
+            const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+            const data = await pdfParse(Buffer.from(fileBuffer));
+            textoBruto = data.text;
+          } catch (pdfErr: any) {
+            console.warn('[pdf-parse] Falha ao parsear PDF, usando fallback de texto bruto:', pdfErr.message);
+            textoBruto = fileBuffer.toString('latin1').replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim();
+          }
         } else if (['csv', 'ofx'].includes(ext || '')) {
           textoBruto = fileBuffer.toString('utf-8');
         } else if (['xlsx', 'xls'].includes(ext || '')) {
