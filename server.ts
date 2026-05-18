@@ -237,45 +237,67 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         }
       }
 
-      let prompt = `Você é um assistente financeiro especialista em análise de dados.`;
-      
+      // Monta o texto de entrada para o LLM
+      let textoExtraido = '';
       if (textoBruto) {
-        // Limita o texto ANTES de interpolar na string — evita enviar comentários acidentalmente ao LLM
         console.log(`[Importação] textoBruto extraído. Tamanho original: ${textoBruto.length} caracteres.`);
-        const textoLimitado = textoBruto.substring(0, 3000);
-        console.log(`[Importação] textoLimitado que será enviado à IA: ${textoLimitado.length} caracteres.`);
-        prompt += `
-Abaixo está o texto extraído de um extrato ou nota fiscal. Extraia cada transação financeira e classifique-a.
-Texto:
-"""
-${textoLimitado}
-"""
-`;
+        textoExtraido = textoBruto.substring(0, 5000);
+        console.log(`[Importação] textoExtraido que será enviado à IA: ${textoExtraido.length} caracteres.`);
       } else if (transacoes) {
-        // Limita a lista de transações ANTES de interpolar
-        const transacoesLimitadas = JSON.stringify(transacoes.slice(0, 50));
-        prompt += `
-Abaixo está uma lista de transações em JSON. Classifique-as e identifique recorrência e origem.
-Transações:
-${transacoesLimitadas}
-`;
+        textoExtraido = JSON.stringify(transacoes.slice(0, 80));
       } else {
         return res.status(400).json({ error: 'Nenhum dado fornecido' });
       }
 
-      prompt += `
-Instrução estrita:
-Responda APENAS com um JSON válido, sem texto adicional, sem markdown, sem explicações.
-O JSON deve conter obrigatoriamente um objeto com a chave "transacoes", cujo valor é uma lista/array de objetos.
-Cada objeto da lista DEVE conter:
-- descricao: nome legível da transação
-- valor: número (positivo para receita, negativo para despesa). Formate como número.
-- data: formato YYYY-MM-DD
-- categoria: escolha EXATAMENTE UMA destas: Alimentação, Transporte, Moradia, Saúde, Lazer, Assinatura, Investimento, Salário, Venda, Fornecedor, Imposto, Outros
-- tipo: "receita" ou "despesa"
-- recorrente: boolean (true se parecer ser uma assinatura ou parcela recorrente)
+      const prompt = `
+Você é um classificador de extratos bancários brasileiros.
+Analise o texto abaixo de um extrato bancário Santander Empresas.
 
-Formato esperado: { "transacoes": [...] }`;
+O formato de cada linha é:
+DATA | DESCRIÇÃO | (DOCUMENTO opcional) | VALOR | SALDO
+
+REGRAS:
+1. Valor negativo (com sinal - ou entre parênteses) = DESPESA
+2. Valor positivo = RECEITA
+3. IGNORE completamente linhas com: "Aplicacao Contamax", "Resgate Contamax Automatico", "Cancelamento Resgate Contamax", "Iof Adicional", "Iof Imposto"
+4. Data no formato DD/MM/AAAA — converta para AAAA-MM-DD no JSON
+5. Use o valor absoluto (sem o sinal negativo) no campo "valor"
+
+CATEGORIAS para despesa:
+- Transporte: posto, combustível, Uber, 99 Food, parking, ECO POSTO, POSTO PHENIX, POSTO VITORIA
+- Alimentação: restaurante, hortifruti, mercadinho, pão de açúcar, rei do pirao, bolacha
+- Saúde: farmácia, médico, Fleury, hospital
+- Energia: COMPANHIA ENE DE PE, CELPE, NEOENERGIA, COPEL
+- Impostos: IPVA, SEFAZ, IOF, tributos
+- Serviços: contabilidade, RESISTENCIA CONTABIL, CONSELHO REGIONAL, USE TELECOMUNICACOES
+- Fornecedor: FACIL SUPRIMENTOS, SOLFACIL, SOLAR LIFE, OPTATEC, SOUZA E LUCENA
+- Financiamento: AYMORE, debito emprestimo, prest emprestimos, CEF MATRIZ, ITAU UNIBANCO
+- Pessoal: qualquer Pix Enviado para nome de pessoa física (ex: WELLEN, CRISTINO, MARCOS, PAULO, etc.)
+- Capitalização: Debito Aut. Titulo Capitalizacao
+- Outros: qualquer outro não classificado acima
+
+CATEGORIAS para receita:
+- Salário: Pix Recebido, Ted Recebida, Cr Cob Bloq Comp Conf Recebimento
+- Outros: qualquer outro recebimento
+
+Retorne SOMENTE o JSON abaixo, sem texto adicional, sem markdown, sem explicações:
+
+{
+  "transacoes": [
+    {
+      "descricao": "descrição limpa sem números de documento",
+      "valor": 150.00,
+      "tipo": "despesa",
+      "categoria": "Transporte",
+      "data": "2026-04-01",
+      "recorrente": false
+    }
+  ]
+}
+
+TEXTO DO EXTRATO:
+${textoExtraido}
+`;
 
       try {
         const chatCompletion = await groq.chat.completions.create({
