@@ -162,7 +162,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       try {
         const chatCompletion = await groq.chat.completions.create({
           messages: [{ role: 'user', content: promptContext }],
-          model: 'llama3-8b-8192',
+          model: 'llama-3.1-8b-instant',
           temperature: 0.5,
           response_format: { type: "json_object" },
         });
@@ -174,7 +174,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
             recomendacoes = parsed.recomendacoes;
           }
         }
-      } catch (aiError) {
+      } catch (aiError: any) {
+        if (aiError?.status === 429) {
+          return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
+        }
         console.error("Groq AI Engine error, using fallbacks:", aiError);
       }
 
@@ -278,26 +281,33 @@ Cada objeto da lista DEVE conter:
 
 Formato esperado: { "transacoes": [...] }`;
 
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'llama3-8b-8192',
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      });
+      try {
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model: 'llama-3.3-70b-versatile',  // 70B para máxima precisão na classificação
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        });
 
-      const aiResponse = chatCompletion.choices[0]?.message?.content;
-      console.log('Resposta bruta do modelo Groq em /api/ia/classificar:', aiResponse);
+        const aiResponse = chatCompletion.choices[0]?.message?.content;
+        console.log('Resposta bruta do modelo Groq em /api/ia/classificar:', aiResponse);
 
-      if (aiResponse) {
-        try {
-          const parsed = JSON.parse(aiResponse);
-          return res.json({ transacoes: parsed.transacoes || [] });
-        } catch (parseError) {
-          console.error('Erro no JSON.parse da resposta do Groq:', parseError, 'Texto retornado:', aiResponse);
-          return res.status(500).json({ error: 'Erro ao analisar a resposta da IA como JSON válido.' });
+        if (aiResponse) {
+          try {
+            const parsed = JSON.parse(aiResponse);
+            return res.json({ transacoes: parsed.transacoes || [] });
+          } catch (parseError) {
+            console.error('Erro no JSON.parse da resposta do Groq:', parseError, 'Texto retornado:', aiResponse);
+            return res.status(500).json({ error: 'Erro ao analisar a resposta da IA como JSON válido.' });
+          }
+        } else {
+          return res.status(500).json({ error: 'Sem resposta da IA' });
         }
-      } else {
-        return res.status(500).json({ error: 'Sem resposta da IA' });
+      } catch (groqErr: any) {
+        if (groqErr?.status === 429) {
+          return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
+        }
+        throw groqErr;
       }
     } catch (err: any) {
       console.error('Error classifying with Groq in /api/ia/classificar:', err);
@@ -321,24 +331,33 @@ Formato esperado: { "transacoes": [...] }`;
       return res.status(400).json({ error: 'Nenhuma mensagem fornecida.' });
     }
 
+    // Limita o histórico a 10 mensagens para reduzir consumo de tokens
+    const mensagensLimitadas = messages.slice(-10);
+
     // Define headers SSE imediatamente para garantir que o stream seja estabelecido
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Desabilita buffering em proxies Nginx
-    res.flushHeaders(); // Força envio dos headers ao cliente antes do stream começar
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
-    const systemPrompt = `Você é um consultor financeiro pessoal. O usuário tem score ${context.score ?? 'N/A'}, renda R$${context.renda ?? 0}, dívidas de R$${context.dividas ?? 0}, economias de R$${context.economias ?? 0}. Responda em português, de forma direta e prática. Seja objetivo e use formatação simples.`;
+    // System prompt compacto — apenas dados essenciais do perfil
+    const top5 = (context.transacoesRecentes || []).slice(0, 5)
+      .map((t: any) => `${t.descricao}: R$${t.valor}`).join(', ');
+    const metasAtivas = (context.metas || []).filter((m: any) => !m.concluida).slice(0, 3)
+      .map((m: any) => m.titulo).join(', ');
+    const systemPrompt = `Você é um consultor financeiro pessoal objetivo. Dados do usuário: Score ${context.score ?? 'N/A'} | Renda R$${context.renda ?? 0} | Saldo R$${context.economias ?? 0} | Dívidas R$${context.dividas ?? 0}${top5 ? ` | Últimas transações: ${top5}` : ''}${metasAtivas ? ` | Metas ativas: ${metasAtivas}` : ''}. Responda em português de forma direta e prática. Use linguagem simples, sem markdown excessivo.`;
 
     try {
-      console.log("[/api/groq/chat] Iniciando chamada ao Groq com", messages?.length, "mensagens");
+      console.log("[/api/groq/chat] Iniciando chamada ao Groq com", mensagensLimitadas.length, "mensagens (limitado de", messages.length, ")");
       const stream = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
-          ...messages
+          ...mensagensLimitadas
         ],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',  // Modelo mais rápido, ideal para chat em tempo real
         temperature: 0.5,
+        max_tokens: 1024,  // Limita tokens de saída para economizar cota
         stream: true,
       });
 
@@ -356,11 +375,13 @@ Formato esperado: { "transacoes": [...] }`;
         status: error?.status,
         code: error?.code,
         type: error?.type,
-        name: error?.name,
-        stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
       });
-      // Headers SSE já foram enviados via flushHeaders(); usar write para comunicar erro ao cliente
-      res.write(`data: ${JSON.stringify({ error: 'Erro no assistente IA: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
+      // Trata rate limit (429) com mensagem amigável
+      if (error?.status === 429) {
+        res.write(`data: ${JSON.stringify({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ error: 'Erro no assistente IA: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
+      }
       res.write('data: [DONE]\n\n');
       res.end();
     }
@@ -376,7 +397,7 @@ Formato OBRIGATÓRIO de saída (apenas JSON válido):
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         temperature: 0.7,
         response_format: { type: "json_object" },
       });
@@ -384,6 +405,9 @@ Formato OBRIGATÓRIO de saída (apenas JSON válido):
       const aiResponse = chatCompletion.choices[0]?.message?.content || '{}';
       res.json(JSON.parse(aiResponse));
     } catch (err: any) {
+      if (err?.status === 429) {
+        return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
+      }
       console.error('Error suggesting goal with Groq:', err);
       res.status(500).json({ error: 'Erro na sugestão de meta via IA' });
     }
@@ -400,12 +424,15 @@ Forneça uma explicação curta (máximo 3 parágrafos) sobre esse cenário, com
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         temperature: 0.5,
       });
 
       res.json({ explicacao: chatCompletion.choices[0]?.message?.content });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.status === 429) {
+        return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
+      }
       console.error('Simulador error:', error);
       res.status(500).json({ error: 'Erro gerando explicação do simulador' });
     }
@@ -426,14 +453,17 @@ Exemplo: { "alertas": ["Você gastou 40% a mais com alimentação essa semana.",
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         temperature: 0.3,
         response_format: { type: "json_object" },
       });
 
       const response = JSON.parse(chatCompletion.choices[0]?.message?.content || '{"alertas":[]}');
       res.json(response);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.status === 429) {
+        return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
+      }
       console.error('Alertas error:', error);
       res.status(500).json({ error: 'Erro analisando alertas' });
     }
