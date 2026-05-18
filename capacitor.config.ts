@@ -24,6 +24,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     cleartext: false,
     // url: 'https://SEU-PROJETO.vercel.app', // ← USE SOMENTE em dev/live-reload. Remova para produção.
+    allowNavigation: ['api.antigravity.dev', '*.antigravity.dev'],
   },
   android: {
     backgroundColor: '#030712', // Corresponde ao bg-gray-950 do Tailwind

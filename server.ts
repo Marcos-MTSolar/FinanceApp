@@ -53,7 +53,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20, 
+  max: 200, 
   message: { error: 'Limite de requisições de IA atingido. Faça upgrade do plano.' }
 });
 
@@ -214,7 +214,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       
       if (textoBruto) {
         // Limita o texto ANTES de interpolar na string — evita enviar comentários acidentalmente ao LLM
+        console.log(`[Importação] textoBruto extraído. Tamanho original: ${textoBruto.length} caracteres.`);
         const textoLimitado = textoBruto.substring(0, 3000);
+        console.log(`[Importação] textoLimitado que será enviado à IA: ${textoLimitado.length} caracteres.`);
         prompt += `
 Abaixo está o texto extraído de um extrato ou nota fiscal. Extraia cada transação financeira e classifique-a.
 Texto:
@@ -430,6 +432,40 @@ Exemplo: { "alertas": ["Você gastou 40% a mais com alimentação essa semana.",
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // API Proxy para Plataforma Antigravity
+  app.post('/api/antigravity/action', requireAuth, aiLimiter, async (req, res) => {
+    try {
+      const payload = req.body;
+      const apiUrl = process.env.ANTIGRAVITY_API_URL || 'https://api.antigravity.dev/v1';
+      const apiKey = process.env.ANTIGRAVITY_API_KEY;
+
+      if (!apiKey) {
+        return res.status(500).json({ error: 'Chave do Antigravity não configurada no servidor.' });
+      }
+
+      const requestPayload = { ...payload, firebaseUid: req.user?.uid };
+      const fetch = (await import('node-fetch')).default || globalThis.fetch;
+      
+      const response = await fetch(`${apiUrl}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(requestPayload)
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.error || 'Erro na API Antigravity' });
+      }
+      res.json(data);
+    } catch (err: any) {
+      console.error('Erro no proxy Antigravity:', err);
+      res.status(500).json({ error: 'Falha interna ao conectar com Antigravity' });
+    }
+  });
 
   // Global Error Handler para capturar 500s e retornar como JSON
   app.use((err: any, req: any, res: any, next: any) => {

@@ -91,6 +91,7 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
       const decoder = new TextDecoder();
       let aiFullResponse = '';
       let hasError = false;
+      let buffer = '';
 
       const tempId = 'temp_' + Date.now();
       setMessages(prev => [...prev, { id: tempId, role: 'assistant', content: '', timestamp: new Date() }]);
@@ -99,8 +100,9 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunkText = decoder.decode(value);
-        const lines = chunkText.split('\n\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
