@@ -186,6 +186,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // API Route to classify transactions using Groq
   app.post('/api/ia/classificar', requireAuth, aiLimiter, upload.single('file'), async (req: any, res: any) => {
+    console.log('BODY recebido:', JSON.stringify(req.body).slice(0, 200));
+    console.log('GROQ KEY presente:', !!process.env.GROQ_API_KEY);
     try {
       let textoBruto = req.body.textoBruto || ''; 
       let transacoes = req.body.transacoes ? JSON.parse(req.body.transacoes) : null;
@@ -275,6 +277,7 @@ Formato esperado: { "transacoes": [...] }`;
 
   // API Route for AI Chat Streaming
   app.post('/api/groq/chat', requireAuth, aiLimiter, async (req, res) => {
+    console.log('BODY recebido:', JSON.stringify(req.body).slice(0, 200));
     const keyPresent = !!process.env.GROQ_API_KEY;
     console.log("[/api/groq/chat] GROQ_API_KEY presente:", keyPresent);
     if (!keyPresent) {
