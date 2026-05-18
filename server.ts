@@ -4,8 +4,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import { Groq } from 'groq-sdk';
-// @ts-ignore
-import * as pdfParseModule from 'pdf-parse';
+// pdf-parse import removido daqui para evitar problemas no serverless
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
@@ -13,6 +12,8 @@ import multer from 'multer';
 import { generatePdfStream } from './serverReportGenerator';
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+console.log('GROQ KEY:', process.env.GROQ_API_KEY ? 'carregada' : 'AUSENTE');
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -193,6 +194,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       if (fileBuffer) {
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
+          const pdfParseModule = await import('pdf-parse');
           const pdfParse = (pdfParseModule as any).default || pdfParseModule;
           const data = await pdfParse(Buffer.from(fileBuffer));
           textoBruto = data.text;
@@ -425,5 +427,11 @@ Exemplo: { "alertas": ["Você gastou 40% a mais com alimentação essa semana.",
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Global Error Handler para capturar 500s e retornar como JSON
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('Erro interno:', err);
+    res.status(500).json({ error: err.message || 'Erro interno do servidor' });
+  });
 
 export default app;
