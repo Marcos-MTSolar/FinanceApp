@@ -57,7 +57,7 @@ const aiLimiter = rateLimit({
 });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
@@ -193,7 +193,7 @@ const PORT = process.env.PORT || 3000;
       if (fileBuffer) {
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
-          const pdfParse = pdfParseModule.default || pdfParseModule;
+          const pdfParse = (pdfParseModule as any).default || pdfParseModule;
           const data = await pdfParse(Buffer.from(fileBuffer));
           textoBruto = data.text;
         } else if (['csv', 'ofx'].includes(ext || '')) {
