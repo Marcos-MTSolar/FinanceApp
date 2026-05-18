@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import multer from 'multer';
-import { generatePdfStream } from '../serverReportGenerator';
+// import { generatePdfStream } from '../serverReportGenerator'; // Movido para import dinâmico
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -80,6 +80,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   app.post('/api/relatorio', requireAuth, async (req, res) => {
     try {
       const data = req.body;
+      const { generatePdfStream } = await import('../serverReportGenerator');
       const stream = await generatePdfStream(data);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=relatorio.pdf');
