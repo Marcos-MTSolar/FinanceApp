@@ -27,12 +27,13 @@ const CATEGORIAS_VALIDAS = [
 ];
 
 export function ImportData() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { plan, checkAccess } = usePlan();
   const [step, setStep] = useState<ImportStep>('upload');
   const [errorMsg, setErrorMsg] = useState('');
   const [transactions, setTransactions] = useState<ImportedTransaction[]>([]);
   const [progressMsg, setProgressMsg] = useState('');
+  const [savedCount, setSavedCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,9 +84,16 @@ export function ImportData() {
         },
         body: formData
       });
-      const classificarData = await classificarRes.json();
+
+      // Parse do JSON com fallback seguro — evita SyntaxError em respostas de erro (429, 500, etc.)
+      let classificarData: any = {};
+      try {
+        classificarData = await classificarRes.json();
+      } catch {
+        throw new Error(`Erro do servidor (HTTP ${classificarRes.status}). Tente novamente.`);
+      }
       
-      if (!classificarRes.ok) throw new Error(classificarData.error || 'Erro na IA');
+      if (!classificarRes.ok) throw new Error(classificarData.error || `Erro HTTP ${classificarRes.status}`);
       
       if (classificarData.transacoes?.length > 0) {
         setTransactions(
@@ -102,6 +110,8 @@ export function ImportData() {
       console.error(err);
       setErrorMsg(err.message || 'Ocorreu um erro no processamento do arquivo.');
       setStep('upload');
+      // Reset do input para permitir re-upload do mesmo arquivo sem precisar trocar de arquivo
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -111,8 +121,12 @@ export function ImportData() {
     );
   };
 
+  const modo = (profile?.modo as 'pessoal' | 'empresarial') || 'pessoal';
+
+
   const handleSave = async () => {
     if (!user) return;
+    const qtdParaSalvar = transactions.length;
     setStep('processing');
     setProgressMsg('Salvando transações na nuvem...');
     
@@ -127,6 +141,7 @@ export function ImportData() {
           categoria: t.categoria,
           tipo: t.tipo,
           recorrente: t.recorrente,
+          modo,          // campo obrigatório para a query where('modo') funcionar
           origem: 'importado',
           userId: user.uid
         });
@@ -136,10 +151,13 @@ export function ImportData() {
       // Gamification Reward: Importar extrato (+50 XP)
       await addXp(user.uid, 50);
 
+      // Salva o contador ANTES de limpar as transações
+      setSavedCount(qtdParaSalvar);
+      setTransactions([]);
       setStep('success');
     } catch (err: any) {
       console.error(err);
-      setErrorMsg('Erro ao salvar as transações.');
+      setErrorMsg('Erro ao salvar as transações. Verifique sua conexão e tente novamente.');
       setStep('preview');
     }
   };
@@ -323,7 +341,7 @@ export function ImportData() {
           </div>
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Importação Concluída!</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-sm">
-            Foram inseridas {totais.qtd} transações. Os valores já constam no seu saldo e nos demais resumos.
+            Foram inseridas {savedCount} transações. Os valores já constam no seu saldo e nos demais resumos.
           </p>
           <div className="flex space-x-4">
             <button 

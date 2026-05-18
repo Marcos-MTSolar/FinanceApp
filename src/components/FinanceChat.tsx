@@ -79,11 +79,18 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
         body: JSON.stringify({ messages: history, context }),
       });
 
+      // Trata erros HTTP (401, 429, 500) antes de tentar ler o stream SSE
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `Erro HTTP ${res.status}` }));
+        throw new Error(errData.error || `Erro HTTP ${res.status}`);
+      }
+
       if (!res.body) throw new Error('No readable stream');
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let aiFullResponse = '';
+      let hasError = false;
 
       const tempId = 'temp_' + Date.now();
       setMessages(prev => [...prev, { id: tempId, role: 'assistant', content: '', timestamp: new Date() }]);
@@ -101,7 +108,12 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
             if (dataStr === '[DONE]') break;
             try {
               const data = JSON.parse(dataStr);
-              if (data.text) {
+              if (data.error) {
+                // Backend sinalizou erro dentro do stream
+                hasError = true;
+                aiFullResponse = `⚠️ ${data.error}`;
+                setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: aiFullResponse } : m));
+              } else if (data.text) {
                 aiFullResponse += data.text;
                 setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: aiFullResponse } : m));
               }
@@ -110,14 +122,27 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
         }
       }
 
-      await addDoc(collection(db, `chats/${user.uid}/messages`), {
-        role: 'assistant',
-        content: aiFullResponse,
-        timestamp: serverTimestamp()
-      });
+      // Só persiste no Firestore se a resposta não foi um erro
+      if (aiFullResponse && !hasError) {
+        await addDoc(collection(db, `chats/${user.uid}/messages`), {
+          role: 'assistant',
+          content: aiFullResponse,
+          timestamp: serverTimestamp()
+        });
+      } else if (!aiFullResponse) {
+        // Remove a bolha temporária vazia se nada chegou
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+      }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[FinanceChat] Erro na chamada Groq:', error);
+      // Exibe mensagem de erro amigável na interface
+      setMessages(prev => [...prev, { 
+        id: 'err_' + Date.now(), 
+        role: 'assistant', 
+        content: `⚠️ Não foi possível conectar ao assistente: ${error.message || 'Tente novamente.'}`,
+        timestamp: new Date()
+      }]);
     } finally {
       setIsTyping(false);
     }

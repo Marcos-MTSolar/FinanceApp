@@ -14,7 +14,15 @@ import {
   Shield, 
   Menu, 
   X,
-  Trophy
+  Trophy,
+  Zap,
+  Star,
+  FileUp,
+  CheckCircle2,
+  ArrowUpCircle,
+  AlertTriangle,
+  TrendingUp,
+  Info
 } from 'lucide-react';
 import { LEVEL_THRESHOLDS } from '../lib/gamification';
 
@@ -219,6 +227,91 @@ export function NiveisPage() {
             </div>
           </div>
 
+          {/* Seção: Como Ganhar XP */}
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl shadow-black/20 mb-6">
+            <div className="p-6 lg:p-8 border-b border-gray-800 flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                <Zap className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Como Ganhar XP</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Complete essas ações para acelerar sua evolução financeira</p>
+              </div>
+            </div>
+
+            <div className="p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* +10 XP - Nova Transação */}
+              <div className="group flex items-start gap-4 p-5 bg-gray-950 border border-gray-800 rounded-2xl hover:border-blue-500/40 hover:bg-blue-500/5 transition-all duration-200">
+                <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                  <CreditCard className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-sm font-bold text-white">Registrar Transação</span>
+                    <span className="text-xs font-extrabold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-xl whitespace-nowrap">+10 XP</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Cada vez que você adicionar uma receita ou despesa manualmente. É o hábito mais importante!</p>
+                </div>
+              </div>
+
+              {/* +50 XP - Importar Extrato */}
+              <div className="group flex items-start gap-4 p-5 bg-gray-950 border border-gray-800 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all duration-200">
+                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+                  <FileUp className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-sm font-bold text-white">Importar Extrato</span>
+                    <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-xl whitespace-nowrap">+50 XP</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Faça upload de um PDF, CSV ou imagem na tela de Importar. A IA classifica automaticamente!</p>
+                </div>
+              </div>
+
+              {/* +100 XP - Diagnóstico */}
+              <div className="group flex items-start gap-4 p-5 bg-gray-950 border border-gray-800 rounded-2xl hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all duration-200">
+                <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex-shrink-0 group-hover:bg-indigo-500/20 transition-colors">
+                  <TrendingUp className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-sm font-bold text-white">Completar Diagnóstico</span>
+                    <span className="text-xs font-extrabold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-xl whitespace-nowrap">+100 XP</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Responda o questionário de diagnóstico financeiro completo e receba seu score personalizado.</p>
+                </div>
+              </div>
+
+              {/* +500 XP - Completar Meta */}
+              <div className="group flex items-start gap-4 p-5 bg-gray-950 border border-gray-800 rounded-2xl hover:border-yellow-500/40 hover:bg-yellow-500/5 transition-all duration-200">
+                <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex-shrink-0 group-hover:bg-yellow-500/20 transition-colors">
+                  <CheckCircle2 className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-sm font-bold text-white">Concluir uma Meta</span>
+                    <span className="text-xs font-extrabold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-xl whitespace-nowrap">+500 XP</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">A maior recompensa! Marque uma meta como concluída quando atingir o valor alvo definido.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Dica sobre não perder ritmo */}
+            <div className="mx-6 mb-6 lg:mx-8 lg:mb-8 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex items-start gap-3">
+              <div className="p-1.5 bg-amber-500/10 rounded-lg flex-shrink-0 mt-0.5">
+                <Info className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-300 mb-1">Como o XP funciona?</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  O XP é acumulativo e nunca é perdido — você só cresce de nível, nunca regride. Manter o hábito diário de registrar transações é a forma mais rápida de subir. Uma meta concluída vale o mesmo que 50 transações registradas!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabela de Níveis */}
           <div className="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl shadow-black/20">
             <div className="p-6 lg:p-8 border-b border-gray-800">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">

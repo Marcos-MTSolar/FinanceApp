@@ -1,8 +1,27 @@
+# ── Dependências ──────────────────────────────────────────────────────
 node_modules/
-build/
+
+# ── Build artifacts (gerados pelo Vite / esbuild) ─────────────────────
+# ⚠️ dist/ é regenerado a cada `npm run build`. Não commite.
+# O APK usa os assets copiados pelo `cap sync`, não esta pasta diretamente.
 dist/
+build/
 coverage/
+
+# ── Sistema operacional ───────────────────────────────────────────────
 .DS_Store
+
+# ── Logs ─────────────────────────────────────────────────────────────
 *.log
+
+# ── Variáveis de ambiente ─────────────────────────────────────────────
+# ⚠️ NUNCA commite .env (contém GROQ_API_KEY, Firebase secrets, etc.)
+# Use GitHub Secrets para CI/CD (veja .github/workflows/build-apk.yml)
 .env*
 !.env.example
+
+# ── Pasta android/ ────────────────────────────────────────────────────
+# A pasta android/ É rastreada pelo Git (necessário para o workflow CI).
+# O android/.gitignore já exclui arquivos gerados (build/, *.apk, assets/public).
+# NÃO adicione android/ aqui.
+

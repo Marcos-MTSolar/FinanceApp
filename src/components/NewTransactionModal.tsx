@@ -28,6 +28,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
   const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('Alimentação');
   const [data, setData] = useState(() => new Date().toISOString().split('T')[0]);
+  const [recorrente, setRecorrente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,6 +39,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
     setDescricao('');
     setCategoria('Alimentação');
     setTipo('despesa');
+    setRecorrente(false);
     setError('');
     setLoading(false);
     onClose();
@@ -68,6 +70,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         tipo,
         categoria,
         data: formattedDate,
+        recorrente,
         modo,
         criadoEm: new Date().toISOString()
       });
@@ -207,6 +210,20 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
                 className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
               />
             </div>
+          </div>
+
+          {/* Campo Recorrente */}
+          <div className="flex items-center gap-3 p-3.5 bg-gray-950 border border-gray-800 rounded-2xl">
+            <input
+              type="checkbox"
+              id="recorrente"
+              checked={recorrente}
+              onChange={(e) => setRecorrente(e.target.checked)}
+              className="w-4 h-4 rounded accent-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="recorrente" className="text-sm font-medium text-gray-300 cursor-pointer select-none">
+              Transação recorrente (mensal)
+            </label>
           </div>
 
           {/* Botões de Ação */}

@@ -210,18 +210,22 @@ async function startServer() {
       let prompt = `Você é um assistente financeiro especialista em análise de dados.`;
       
       if (textoBruto) {
+        // Limita o texto ANTES de interpolar na string — evita enviar comentários acidentalmente ao LLM
+        const textoLimitado = textoBruto.substring(0, 3000);
         prompt += `
 Abaixo está o texto extraído de um extrato ou nota fiscal. Extraia cada transação financeira e classifique-a.
 Texto:
 """
-${textoBruto.substring(0, 3000)} // limiter para evitar tokens excessivos
+${textoLimitado}
 """
 `;
       } else if (transacoes) {
+        // Limita a lista de transações ANTES de interpolar
+        const transacoesLimitadas = JSON.stringify(transacoes.slice(0, 50));
         prompt += `
 Abaixo está uma lista de transações em JSON. Classifique-as e identifique recorrência e origem.
 Transações:
-${JSON.stringify(transacoes.slice(0, 50))} // limiter
+${transacoesLimitadas}
 `;
       } else {
         return res.status(400).json({ error: 'Nenhum dado fornecido' });
@@ -274,15 +278,23 @@ Formato esperado: { "transacoes": [...] }`;
     console.log("[/api/groq/chat] GROQ_API_KEY presente:", keyPresent);
     if (!keyPresent) {
       console.error("[/api/groq/chat] GROQ_API_KEY não encontrada. Verifique o arquivo .env.");
+      return res.status(500).json({ error: 'GROQ_API_KEY não configurada no servidor.' });
     }
 
-    const { messages, context } = req.body;
-    
+    const { messages, context = {} } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Nenhuma mensagem fornecida.' });
+    }
+
+    // Define headers SSE imediatamente para garantir que o stream seja estabelecido
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Desabilita buffering em proxies Nginx
+    res.flushHeaders(); // Força envio dos headers ao cliente antes do stream começar
 
-    const systemPrompt = `Você é um consultor financeiro pessoal. O usuário tem score ${context.score || 'N/A'}, renda ${context.renda || 0}, dívidas de ${context.dividas || 0}, economias de ${context.economias || 0}. Responda em português, de forma direta e prática.`;
+    const systemPrompt = `Você é um consultor financeiro pessoal. O usuário tem score ${context.score ?? 'N/A'}, renda R$${context.renda ?? 0}, dívidas de R$${context.dividas ?? 0}, economias de R$${context.economias ?? 0}. Responda em português, de forma direta e prática. Seja objetivo e use formatação simples.`;
 
     try {
       console.log("[/api/groq/chat] Iniciando chamada ao Groq com", messages?.length, "mensagens");
@@ -313,7 +325,9 @@ Formato esperado: { "transacoes": [...] }`;
         name: error?.name,
         stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
       });
-      res.write(`data: ${JSON.stringify({ error: 'Erro no servidor: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
+      // Headers SSE já foram enviados via flushHeaders(); usar write para comunicar erro ao cliente
+      res.write(`data: ${JSON.stringify({ error: 'Erro no assistente IA: ' + (error instanceof Error ? error.message : String(error)) })}\n\n`);
+      res.write('data: [DONE]\n\n');
       res.end();
     }
   });

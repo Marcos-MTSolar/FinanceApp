@@ -630,11 +630,12 @@ export function Dashboard() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[560px]">
                 <thead>
                   <tr className="border-b border-gray-800 text-xs font-semibold tracking-wider text-gray-500 uppercase">
                     <th className="pb-3 pl-2">Descrição</th>
                     <th className="pb-3">Categoria</th>
+                    <th className="pb-3">Tipo</th>
                     <th className="pb-3">Data</th>
                     <th className="pb-3 text-right pr-2">Valor</th>
                   </tr>
@@ -642,13 +643,13 @@ export function Dashboard() {
                 <tbody className="divide-y divide-gray-800/60 text-sm font-medium text-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-500 font-medium">
+                      <td colSpan={5} className="py-8 text-center text-gray-500 font-medium">
                         Carregando transações do Firestore...
                       </td>
                     </tr>
                   ) : transactions.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-500 font-medium">
+                      <td colSpan={5} className="py-8 text-center text-gray-500 font-medium">
                         Nenhuma movimentação cadastrada ainda.
                       </td>
                     </tr>
@@ -657,14 +658,14 @@ export function Dashboard() {
                       <tr key={item.id} className="hover:bg-gray-800/40 transition-colors group">
                         <td className="py-4 pl-2">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl border ${
+                            <div className={`p-2 rounded-xl border flex-shrink-0 ${
                               item.tipo === 'receita' 
                                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
                                 : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                             }`}>
                               {item.tipo === 'receita' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
                             </div>
-                            <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+                            <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors truncate max-w-[160px]">
                               {item.descricao || 'Sem descrição'}
                             </span>
                           </div>
@@ -674,8 +675,21 @@ export function Dashboard() {
                             {item.categoria || 'Outros'}
                           </span>
                         </td>
-                        <td className="py-4 text-xs text-gray-400">{formatDate(item.data)}</td>
-                        <td className={`py-4 text-right pr-2 font-bold ${
+                        <td className="py-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
+                            item.tipo === 'receita'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          }`}>
+                            {item.tipo === 'receita'
+                              ? <ArrowUpRight className="w-3 h-3" />
+                              : <ArrowDownLeft className="w-3 h-3" />
+                            }
+                            {item.tipo === 'receita' ? 'Receita' : 'Despesa'}
+                          </span>
+                        </td>
+                        <td className="py-4 text-xs text-gray-400 whitespace-nowrap">{formatDate(item.data)}</td>
+                        <td className={`py-4 text-right pr-2 font-bold whitespace-nowrap ${
                           item.tipo === 'receita' ? 'text-emerald-400' : 'text-rose-400'
                         }`}>
                           {item.tipo === 'receita' ? '+' : '-'}{formatCurrency(Math.abs(item.valor))}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, deleteDoc, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { NewTransactionModal } from '../components/NewTransactionModal';
@@ -53,6 +53,9 @@ export function Transacoes() {
   const [filterTipo, setFilterTipo] = useState<'todos' | 'receita' | 'despesa'>('todos');
   const [filterCategoria, setFilterCategoria] = useState('todos');
   const [filterPeriodo, setFilterPeriodo] = useState<'este_mes' | 'ultimo_mes' | 'tres_meses' | 'todos'>('este_mes');
+
+  // Modo do perfil do usuário (pessoal ou empresarial)
+  const modo = (profile?.modo as 'pessoal' | 'empresarial') || 'pessoal';
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -493,6 +496,7 @@ export function Transacoes() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           userId={user?.uid || 'demo'}
+          modo={modo}
         />
       )}
     </div>
