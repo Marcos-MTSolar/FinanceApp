@@ -11,6 +11,14 @@ import admin from 'firebase-admin';
 import multer from 'multer';
 import { generatePdfStream } from './serverReportGenerator';
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: admin.auth.DecodedIdToken | { uid: string };
+    }
+  }
+}
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 console.log('GROQ KEY:', process.env.GROQ_API_KEY ? 'carregada' : 'AUSENTE');

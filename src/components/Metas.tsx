@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
+import { getAuth } from 'firebase/auth';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2 } from 'lucide-react';
 import { addXp, getLevelInfo } from '../lib/gamification';
