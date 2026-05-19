@@ -6,15 +6,25 @@
   touch-action: manipulation;
 }
 
-html, body, #root {
-  position: fixed;
-  overflow: hidden;
+html, body {
+  margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
   overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+/* Apenas no Android via Capacitor — bloqueia drag lateral */
+@media (max-width: 768px) {
+  body {
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
 }
 
 /* Permitir scroll apenas dentro dos containers internos */

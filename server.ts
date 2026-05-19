@@ -445,11 +445,16 @@ ${textoExtraido.substring(0, 8000)}
         totalDespesas = despesas.reduce((s, t) => s + (Number(t.valor) || 0), 0);
 
         // 3. Buscar metas ativas
+        // Tenta buscar metas sem filtro para ver o que existe
         const metasSnap = await adminDb
           .collection(`metas/${req.user.uid}/items`)
-          .where('concluida', '==', false)
+          .limit(10)
           .get();
-        metas = metasSnap.docs.map(d => d.data());
+
+        metas = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Log para ver a estrutura real dos documentos
+        console.log('[Chat] Estrutura das metas:', JSON.stringify(metas.slice(0, 2)));
 
         console.log('[Chat] Metas encontradas:', metas.length);
         console.log('[Chat] Dados das metas:', JSON.stringify(metas));
@@ -486,9 +491,10 @@ DADOS REAIS DO USUÁRIO AGORA:
 - Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
 
 TRANSAÇÕES RECENTES:
-${transacoes.slice(0, 8).map(t =>
-  `${t.data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao}`
-).join('\n') || 'Nenhuma transação registrada'}
+${transacoes.slice(0, 8).map(t => {
+  const data = t.data?.split('T')[0] || t.data;
+  return `${data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao}`;
+}).join('\n') || 'Nenhuma transação registrada'}
 
 METAS:
 ${metas.length > 0
