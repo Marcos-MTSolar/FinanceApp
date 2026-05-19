@@ -6,24 +6,21 @@
   touch-action: manipulation;
 }
 
-html, body {
-  overscroll-behavior: none;
-  overflow: hidden;
+html, body, #root {
   position: fixed;
+  overflow: hidden;
   width: 100%;
   height: 100%;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
   touch-action: pan-y;
-}
-
-#root {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.app-container {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+/* Permitir scroll apenas dentro dos containers internos */
+.scroll-container {
+  overflow-y: auto;
+  height: 100%;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }

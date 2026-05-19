@@ -166,7 +166,7 @@ export function ImportPage() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 p-6 lg:p-10 max-w-7xl w-full mx-auto overflow-y-auto">
+        <div className="flex-1 p-6 lg:p-10 max-w-7xl w-full mx-auto scroll-container">
           <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
             <ImportData />
           </div>

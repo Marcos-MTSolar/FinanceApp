@@ -449,9 +449,14 @@ ${textoExtraido.substring(0, 8000)}
         // 3. Buscar metas ativas
         const metasSnap = await adminDb
           .collection(`metas/${req.user.uid}/items`)
-          .where('status', '==', 'ativa')
+          .where('concluida', '==', false)
           .get();
         metas = metasSnap.docs.map(d => d.data());
+
+        console.log('[Chat] Metas encontradas:', metas.length);
+        console.log('[Chat] Dados das metas:', JSON.stringify(metas));
+        console.log('[Chat] Transações encontradas:', transacoes.length);
+        console.log('[Chat] Receitas:', totalReceitas, '| Despesas:', totalDespesas);
       } else {
         // Fallback mock
         userData = { nome: 'Usuário Dev', nivel: 1, xp: 50, renda: 4500 };
@@ -469,40 +474,35 @@ ${textoExtraido.substring(0, 8000)}
     }
 
     const systemPrompt = `
-Você é um assistente financeiro pessoal do FinanceAI.
-Responda SOMENTE com base nos dados abaixo. 
-NUNCA invente valores, metas ou sugestões genéricas.
-Se o dado não estiver abaixo, diga que não encontrou a informação.
+Você é um assistente financeiro do FinanceAI. 
+Responda em no máximo 3 frases curtas e diretas.
+Use APENAS os números abaixo. Não invente nada.
+Não faça listas. Não use bullet points. Não dê dicas genéricas.
+Se não tiver o dado, diga: "Não encontrei essa informação."
 
-REGRAS DE RESPOSTA:
-- Máximo 4 linhas por resposta
-- Sem listas longas, sem bullet points excessivos
-- Seja direto e use os valores exatos dos dados abaixo
-- Nunca sugira valores diferentes dos que estão nas metas
-- Se o usuário perguntar sobre uma meta, use exatamente o valor e nome da meta que está nos dados
+DADOS REAIS DO USUÁRIO AGORA:
+- Receitas do mês: R$ ${totalReceitas.toFixed(2)}
+- Despesas do mês: R$ ${totalDespesas.toFixed(2)}
+- Saldo atual: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
+- Renda declarada: R$ ${userData.renda || 'não informada'}
+- Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
 
-=== DADOS DO USUÁRIO ===
-Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
-Renda declarada: R$ ${userData.renda || 'não informada'}
+TRANSAÇÕES RECENTES:
+${transacoes.slice(0, 8).map(t =>
+  `${t.data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao}`
+).join('\n') || 'Nenhuma transação registrada'}
 
-MÊS ATUAL (${new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}):
-- Receitas: R$ ${totalReceitas.toFixed(2)}
-- Despesas: R$ ${totalDespesas.toFixed(2)}
-- Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
-
-ÚLTIMAS TRANSAÇÕES:
-${transacoes.slice(0, 10).map(t =>
-  `${t.data} | ${t.tipo} | R$ ${t.valor} | ${t.descricao} | ${t.categoria}`
-).join('\n')}
-
-METAS ATIVAS:
+METAS:
 ${metas.length > 0
   ? metas.map(m =>
-  `- "${m.titulo || m.descricao}" | Meta: R$ ${m.valorAlvo} | Acumulado: R$ ${m.progressoAtual || m.valorAtual || 0} | Falta: R$ ${(m.valorAlvo - (m.progressoAtual || m.valorAtual || 0)).toFixed(2)}`
+  `"${m.titulo || m.descricao}" - falta R$ ${(Number(m.valorAlvo) - Number(m.progressoAtual || m.valorAtual || 0)).toFixed(2)} de R$ ${m.valorAlvo}`
   ).join('\n')
-  : '- Nenhuma meta cadastrada'}
-========================
+  : 'Nenhuma meta cadastrada'}
 `;
+
+    console.log('=== SYSTEM PROMPT ENVIADO ===');
+    console.log(systemPrompt.substring(0, 500));
+    console.log('=============================');
 
     try {
       console.log("[/api/groq/chat] Iniciando chamada ao Groq com", mensagensLimitadas.length, "mensagens (limitado de", messages.length, ")");

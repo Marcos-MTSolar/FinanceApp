@@ -313,7 +313,7 @@ export function Transacoes() {
           </div>
         </header>
 
-        <div className="flex-1 p-6 lg:p-10 space-y-8 max-w-7xl w-full mx-auto overflow-y-auto">
+        <div className="flex-1 p-6 lg:p-10 space-y-8 max-w-7xl w-full mx-auto scroll-container">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-900">
             <div>
               <h2 className="text-2xl font-extrabold tracking-tight text-white">
