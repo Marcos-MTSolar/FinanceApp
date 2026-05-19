@@ -1,18 +1,4 @@
-// Polyfills necessários para pdfjs-dist no Node.js
-if (typeof globalThis.DOMMatrix === 'undefined') {
-  (globalThis as any).DOMMatrix = class DOMMatrix {
-    constructor() { return this; }
-    static fromMatrix() { return new (globalThis as any).DOMMatrix(); }
-  };
-}
-if (typeof globalThis.Path2D === 'undefined') {
-  (globalThis as any).Path2D = class Path2D {};
-}
-if (typeof globalThis.ImageData === 'undefined') {
-  (globalThis as any).ImageData = class ImageData {
-    constructor(public data: any, public width: number, public height: number) {}
-  };
-}
+// Leitura robusta de arquivos usando libs dedicadas no Node.js
 
 import 'dotenv/config';
 import express from 'express';
@@ -223,44 +209,39 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
           try {
-            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            const PDFParser = require('pdf2json');
             
-            const uint8Array = new Uint8Array(fileBuffer);
-            const loadingTask = pdfjsLib.getDocument({ 
-              data: uint8Array,
-              useWorkerFetch: false,
-              useSystemFonts: true,
+            const textoExtraido = await new Promise<string>((resolve, reject) => {
+              const pdfParser = new PDFParser(null, true);
+              
+              pdfParser.on('pdfParser_dataReady', () => {
+                const texto = pdfParser.getRawTextContent();
+                resolve(texto);
+              });
+              
+              pdfParser.on('pdfParser_dataError', (err: any) => {
+                reject(err);
+              });
+              
+              pdfParser.parseBuffer(fileBuffer);
             });
             
-            const pdfDocument = await loadingTask.promise;
-            let textoCompleto = '';
+            console.log('=== TEXTO EXTRAÍDO (pdf2json) ===');
+            console.log('Tamanho:', textoExtraido.length);
+            console.log('Amostra:', textoExtraido.substring(0, 400));
             
-            for (let i = 1; i <= pdfDocument.numPages; i++) {
-              const page = await pdfDocument.getPage(i);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ');
-              textoCompleto += pageText + '\n';
-            }
-            
-            console.log('=== TEXTO EXTRAÍDO (pdfjs) ===');
-            console.log('Total chars:', textoCompleto.length);
-            console.log('Amostra:', textoCompleto.substring(0, 400));
-            
-            if (!textoCompleto || textoCompleto.trim().length < 50) {
+            if (!textoExtraido || textoExtraido.trim().length < 50) {
               return res.status(400).json({ 
                 error: 'PDF sem texto extraível. O arquivo pode ser uma imagem escaneada.' 
               });
             }
             
-            textoBruto = textoCompleto;
+            textoBruto = textoExtraido;
             
           } catch (pdfErr: any) {
-            console.error('[pdfjs] Erro ao parsear PDF:', pdfErr.message);
+            console.error('[pdf2json] Erro:', pdfErr.message);
             return res.status(400).json({ 
-              error: 'Erro ao processar o PDF: ' + pdfErr.message 
+              error: 'Erro ao processar o PDF.' 
             });
           }
         } else if (['csv', 'ofx'].includes(ext || '')) {
