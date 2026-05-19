@@ -473,35 +473,51 @@ ${textoExtraido.substring(0, 8000)}
       userData = { nome: 'Usuário', nivel: 1, xp: 0, renda: 0 };
     }
 
-    const systemPrompt = `INSTRUÇÃO CRÍTICA: Responda em NO MÁXIMO 2 frases. Nada mais. Sem listas. Sem títulos. Sem introduções. Use os valores exatos dos dados fornecidos.
+    // Calcular gastos por categoria
+    const gastosPorCategoria = transacoes
+      .filter(t => t.tipo === 'despesa')
+      .reduce((acc, t) => {
+        const cat = t.categoria || 'Outros';
+        acc[cat] = (acc[cat] || 0) + Number(t.valor);
+        return acc;
+      }, {} as Record<string, number>);
 
-Você é um assistente financeiro do FinanceAI. 
-Responda em no máximo 3 frases curtas e diretas.
-Use APENAS os números abaixo. Não invente nada.
-Não faça listas. Não use bullet points. Não dê dicas genéricas.
+    const categoriaOrdenada = Object.entries(gastosPorCategoria)
+      .sort(([,a], [,b]) => b - a)
+      .map(([cat, val]) => `${cat}: R$${val.toFixed(2)}`)
+      .join(', ');
+
+    const systemPrompt = `
+INSTRUÇÃO CRÍTICA: Responda em NO MÁXIMO 2 frases.
+Sem listas. Sem títulos. Sem introduções.
+Use os valores exatos dos dados fornecidos.
 Se não tiver o dado, diga: "Não encontrei essa informação."
 
-DADOS REAIS DO USUÁRIO AGORA:
+Você é um assistente financeiro do FinanceAI.
+Use APENAS os dados abaixo para responder.
+
+DADOS DO USUÁRIO:
 - Receitas do mês: R$ ${totalReceitas.toFixed(2)}
 - Despesas do mês: R$ ${totalDespesas.toFixed(2)}
 - Saldo atual: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
 - Renda declarada: R$ ${userData.renda || 'não informada'}
-- Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
+
+GASTOS POR CATEGORIA ESTE MÊS:
+${categoriaOrdenada || 'Nenhum gasto registrado'}
 
 TRANSAÇÕES RECENTES:
 ${transacoes.slice(0, 8).map(t => {
   const data = t.data?.split('T')[0] || t.data;
-  return `${data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao}`;
+  return `${data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao} (${t.categoria})`;
 }).join('\n') || 'Nenhuma transação registrada'}
 
 METAS ATIVAS:
 ${metas.length > 0
   ? metas.map(m => {
       const falta = Number(m.valorAlvo) - Number(m.progressoAtual || 0);
-      const prazo = m.prazo || 'sem prazo';
-      return `- "${m.titulo}": meta R$${m.valorAlvo}, acumulado R$${m.progressoAtual || 0}, falta R$${falta.toFixed(2)}, prazo ${prazo}`;
+      return `"${m.titulo}": meta R$${m.valorAlvo}, acumulado R$${m.progressoAtual || 0}, falta R$${falta.toFixed(2)}, prazo ${m.prazo || 'sem prazo'}`;
     }).join('\n')
-  : '- Nenhuma meta cadastrada'}
+  : 'Nenhuma meta cadastrada'}
 `;
 
     console.log('=== SYSTEM PROMPT ENVIADO ===');
