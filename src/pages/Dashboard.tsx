@@ -272,12 +272,54 @@ export function Dashboard() {
 
   const saldoTotal = receitasMes - despesasMes;
 
-  const chartData = transactions
-    .slice(0, 10).reverse()
-    .map((t, idx) => ({
-      data: new Date(t.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      saldo: saldoTotal - idx * 100
-    }));
+  // Buscar transações dos últimos 30/60/90 dias do Firestore
+  const hoje = new Date();
+  const diasAtras = new Date();
+  diasAtras.setDate(hoje.getDate() - periodo); // 30, 60 ou 90
+
+  // Agrupar transações por data e calcular saldo do dia
+  const transacoesPorData = transactions
+    .filter(t => new Date(t.data) >= diasAtras)
+    .reduce((acc, t) => {
+      const data = t.data.split('T')[0];
+      if (!acc[data]) acc[data] = 0;
+      acc[data] += t.tipo === 'receita' ? Number(t.valor) : -Number(t.valor);
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Converter para array ordenado por data com saldo acumulado
+  let saldoAcumulado = 0;
+  const chartData = Object.entries(transacoesPorData)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([data, variacao]) => {
+      saldoAcumulado += variacao;
+      return {
+        data: new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { 
+          day: '2-digit', month: 'short' 
+        }),
+        saldo: parseFloat(saldoAcumulado.toFixed(2))
+      };
+    });
+
+  const calcularScore = (receitas: number, despesas: number, renda: number) => {
+    const rendaBase = renda > 0 ? renda : receitas;
+    
+    if (rendaBase === 0) return { score: 0, label: 'Sem dados' };
+    
+    const taxaCompromisso = despesas / rendaBase;
+    const saldo = receitas - despesas;
+    
+    if (taxaCompromisso <= 0.5 && saldo > 0) return { score: 85, label: 'Ótimo' };
+    if (taxaCompromisso <= 0.7 && saldo > 0) return { score: 65, label: 'Bom' };
+    if (taxaCompromisso <= 0.9) return { score: 45, label: 'Regular' };
+    return { score: 25, label: 'Crítico' };
+  };
+
+  const scoreData = calcularScore(
+    receitasMes,
+    despesasMes,
+    Number(profile?.renda) || Number(diagnostico?.respostas?.rendaVenda) || 0
+  );
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -623,7 +665,7 @@ export function Dashboard() {
               <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo} onImport={() => navigate('/importar')} />
             </div>
             <div className="space-y-6">
-              <ScoreGauge score={diagnostico?.score} />
+              <ScoreGauge score={scoreData.score} label={scoreData.label} />
               <MetasAtivasResumo metas={metas} />
             </div>
           </div>

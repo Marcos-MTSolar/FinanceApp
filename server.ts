@@ -468,42 +468,50 @@ ${textoExtraido.substring(0, 8000)}
 
     const systemPrompt = `
 Você é um assistente financeiro pessoal do FinanceAI.
-Responda SOMENTE com base nos dados abaixo do usuário.
-Não invente informações. Se não tiver dados suficientes, diga que o usuário precisa registrar mais transações.
-Seja direto, objetivo e fale em português brasileiro.
+Responda SOMENTE com base nos dados abaixo. 
+NUNCA invente valores, metas ou sugestões genéricas.
+Se o dado não estiver abaixo, diga que não encontrou a informação.
 
-=== DADOS FINANCEIROS DO USUÁRIO ===
-Nome: ${userData.nome || 'Usuário'}
+REGRAS DE RESPOSTA:
+- Máximo 4 linhas por resposta
+- Sem listas longas, sem bullet points excessivos
+- Seja direto e use os valores exatos dos dados abaixo
+- Nunca sugira valores diferentes dos que estão nas metas
+- Se o usuário perguntar sobre uma meta, use exatamente o valor e nome da meta que está nos dados
+
+=== DADOS DO USUÁRIO ===
 Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
-Renda declarada: R$ ${userData.renda || 0}
+Renda declarada: R$ ${userData.renda || 'não informada'}
 
-MÊS ATUAL:
-- Total de receitas: R$ ${totalReceitas.toFixed(2)}
-- Total de despesas: R$ ${totalDespesas.toFixed(2)}
-- Saldo do mês: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
+MÊS ATUAL (${new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}):
+- Receitas: R$ ${totalReceitas.toFixed(2)}
+- Despesas: R$ ${totalDespesas.toFixed(2)}
+- Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
 
 ÚLTIMAS TRANSAÇÕES:
-${transacoes.slice(0, 10).map(t => 
-  `- ${t.data} | ${t.tipo.toUpperCase()} | R$ ${t.valor} | ${t.descricao} (${t.categoria})`
+${transacoes.slice(0, 10).map(t =>
+  `${t.data} | ${t.tipo} | R$ ${t.valor} | ${t.descricao} | ${t.categoria}`
 ).join('\n')}
 
 METAS ATIVAS:
-${metas.length > 0 
-  ? metas.map(m => `- ${m.titulo || m.descricao}: R$ ${m.progressoAtual || m.valorAtual || 0} / R$ ${m.valorAlvo}`).join('\n')
+${metas.length > 0
+  ? metas.map(m =>
+  `- "${m.titulo || m.descricao}" | Meta: R$ ${m.valorAlvo} | Acumulado: R$ ${m.progressoAtual || m.valorAtual || 0} | Falta: R$ ${(m.valorAlvo - (m.progressoAtual || m.valorAtual || 0)).toFixed(2)}`
+  ).join('\n')
   : '- Nenhuma meta cadastrada'}
-===================================
+========================
 `;
 
     try {
       console.log("[/api/groq/chat] Iniciando chamada ao Groq com", mensagensLimitadas.length, "mensagens (limitado de", messages.length, ")");
       const stream = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
         messages: [
           { role: 'system', content: systemPrompt },
           ...mensagensLimitadas
         ],
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.5,
-        max_tokens: 1024,
+        temperature: 0.3,
+        max_tokens: 300,  // limita a resposta a ~4 linhas
         stream: true,
       });
 

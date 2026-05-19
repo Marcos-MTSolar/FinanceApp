@@ -18,7 +18,7 @@ import { usePlan } from '../hooks/usePlan';
 const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 // Subcomponentes Exportados para reuso no Dashboard novo (src/pages/Dashboard.tsx)
-export function ScoreGauge({ score }: { score?: number | string }) {
+export function ScoreGauge({ score, label }: { score?: number | string; label?: string }) {
   const [showInfo, setShowInfo] = React.useState(false);
   const numericScore = Math.min(Math.max(Number(score) || 0, 0), 100);
 
@@ -29,6 +29,7 @@ export function ScoreGauge({ score }: { score?: number | string }) {
     return             { label: 'Crítico',    color: 'text-rose-400',    stroke: '#ef4444', bg: 'bg-rose-500/10',    border: 'border-rose-500/20',    dot: 'bg-rose-400' };
   };
   const cfg = getScoreConfig(numericScore);
+  const displayLabel = label || cfg.label;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-300">
@@ -72,7 +73,7 @@ export function ScoreGauge({ score }: { score?: number | string }) {
             {score ?? '--'}
           </span>
           <span className={`text-[10px] font-bold mt-0.5 uppercase tracking-wider ${cfg.color}`}>
-            {cfg.label}
+            {displayLabel}
           </span>
         </div>
       </div>
