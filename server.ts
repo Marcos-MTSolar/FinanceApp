@@ -6,6 +6,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import { Groq } from 'groq-sdk';
+import PDFParser from 'pdf2json';
 // pdf-parse import removido daqui para evitar problemas no serverless
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -68,6 +69,7 @@ const aiLimiter = rateLimit({
 });
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(helmet({
@@ -209,41 +211,36 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
           try {
-            const PDFParser = require('pdf2json');
-            
             const textoExtraido = await new Promise<string>((resolve, reject) => {
               const pdfParser = new PDFParser(null, true);
               
               pdfParser.on('pdfParser_dataReady', () => {
-                const texto = pdfParser.getRawTextContent();
+                const texto = (pdfParser as any).getRawTextContent();
                 resolve(texto);
               });
               
-              pdfParser.on('pdfParser_dataError', (err: any) => {
-                reject(err);
+              pdfParser.on('pdfParser_dataError', (errData: any) => {
+                reject(new Error(errData?.parserError || 'Erro no pdf2json'));
               });
               
               pdfParser.parseBuffer(fileBuffer);
             });
-            
-            console.log('=== TEXTO EXTRAÍDO (pdf2json) ===');
-            console.log('Tamanho:', textoExtraido.length);
-            console.log('Amostra:', textoExtraido.substring(0, 400));
-            
+
+            console.log('[pdf2json] Chars extraídos:', textoExtraido.length);
+            console.log('[pdf2json] Amostra:', textoExtraido.substring(0, 400));
+
             if (!textoExtraido || textoExtraido.trim().length < 50) {
               return res.status(400).json({ 
-                error: 'PDF sem texto extraível. O arquivo pode ser uma imagem escaneada.' 
+                error: 'PDF sem texto extraível. Tente converter para CSV.' 
               });
             }
-            
+
             textoBruto = textoExtraido;
-            
+
           } catch (pdfErr: any) {
-            console.error('[pdf2json] Erro completo:', pdfErr);
-            console.error('[pdf2json] Message:', pdfErr.message);
-            console.error('[pdf2json] Stack:', pdfErr.stack);
+            console.error('[pdf2json] Erro:', pdfErr.message);
             return res.status(400).json({ 
-              error: 'Erro ao processar o PDF: ' + pdfErr.message 
+              error: 'Erro ao processar PDF: ' + pdfErr.message 
             });
           }
         } else if (['csv', 'ofx'].includes(ext || '')) {
