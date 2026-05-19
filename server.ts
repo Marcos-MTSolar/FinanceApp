@@ -1,12 +1,17 @@
-// ─── Polyfills para APIs Web usadas pelo pdfjs-dist em ambiente Node/Serverless ───
+// Polyfills necessários para pdfjs-dist no Node.js
 if (typeof globalThis.DOMMatrix === 'undefined') {
-  (globalThis as any).DOMMatrix = class DOMMatrix { constructor() {} };
-}
-if (typeof globalThis.DOMPoint === 'undefined') {
-  (globalThis as any).DOMPoint = class DOMPoint { constructor() {} };
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    constructor() { return this; }
+    static fromMatrix() { return new (globalThis as any).DOMMatrix(); }
+  };
 }
 if (typeof globalThis.Path2D === 'undefined') {
-  (globalThis as any).Path2D = class Path2D { constructor() {} };
+  (globalThis as any).Path2D = class Path2D {};
+}
+if (typeof globalThis.ImageData === 'undefined') {
+  (globalThis as any).ImageData = class ImageData {
+    constructor(public data: any, public width: number, public height: number) {}
+  };
 }
 
 import 'dotenv/config';
@@ -218,25 +223,45 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
           try {
-            const pdfParse = require('pdf-parse/lib/pdf-parse.js');
-            const data = await pdfParse(Buffer.from(fileBuffer));
-            const textoExtraido = data.text;
-
-            console.log('=== TEXTO EXTRAÍDO DO PDF ===');
-            console.log(textoExtraido.substring(0, 500));
-            console.log('=== FIM ===');
-
-            if (!textoExtraido || textoExtraido.trim().length < 50) {
+            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            
+            const uint8Array = new Uint8Array(fileBuffer);
+            const loadingTask = pdfjsLib.getDocument({ 
+              data: uint8Array,
+              useWorkerFetch: false,
+              isEvalSupported: false,
+              useSystemFonts: true,
+            });
+            
+            const pdfDocument = await loadingTask.promise;
+            let textoCompleto = '';
+            
+            for (let i = 1; i <= pdfDocument.numPages; i++) {
+              const page = await pdfDocument.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ');
+              textoCompleto += pageText + '\n';
+            }
+            
+            console.log('=== TEXTO EXTRAÍDO (pdfjs) ===');
+            console.log('Total chars:', textoCompleto.length);
+            console.log('Amostra:', textoCompleto.substring(0, 400));
+            
+            if (!textoCompleto || textoCompleto.trim().length < 50) {
               return res.status(400).json({ 
-                error: 'Não foi possível extrair texto do PDF. Arquivo pode estar corrompido ou ser imagem.' 
+                error: 'PDF sem texto extraível. O arquivo pode ser uma imagem escaneada.' 
               });
             }
-
-            textoBruto = textoExtraido;
+            
+            textoBruto = textoCompleto;
+            
           } catch (pdfErr: any) {
-            console.error('[pdf-parse] Falha ao parsear PDF:', pdfErr.message);
+            console.error('[pdfjs] Erro ao parsear PDF:', pdfErr.message);
             return res.status(400).json({ 
-              error: 'Erro ao ler o PDF. Tente converter para CSV ou envie outro arquivo.' 
+              error: 'Erro ao processar o PDF: ' + pdfErr.message 
             });
           }
         } else if (['csv', 'ofx'].includes(ext || '')) {
