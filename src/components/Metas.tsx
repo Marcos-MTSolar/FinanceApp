@@ -263,6 +263,8 @@ export function Metas() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {activeMetas.map(m => {
              const progressoPct = Math.min(100, Math.max(0, ((m.progressoAtual || 0) / (m.valorAlvo || 1)) * 100));
+             const falta = (m.valorAlvo || 0) - (m.progressoAtual || 0);
+
              return (
               <div key={m.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-indigo-100 dark:border-gray-700 hover:shadow-lg transition">
                 <div className="flex justify-between items-start mb-4">
@@ -271,27 +273,32 @@ export function Metas() {
                       <span className="text-xs font-semibold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-md">
                         {m.categoria}
                       </span>
-                      <span className="text-xs font-semibold px-2 py-1 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-md flex items-center gap-1">
-                        <PiggyBank className="w-3.5 h-3.5" />
-                        Reservado no saldo
+                      <span className="text-xs font-bold px-2 py-1 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-md flex items-center gap-1 shadow-sm">
+                        🔒 R$ {(m.progressoAtual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} reservado no saldo
                       </span>
                     </div>
-                    <h4 className="font-bold text-gray-900 dark:text-white mt-2 leading-tight">{m.titulo}</h4>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mt-3 leading-tight">{m.titulo}</h4>
                   </div>
-                  <Target className="w-5 h-5 text-indigo-400" />
+                  <Target className="w-5 h-5 text-indigo-400 shrink-0" />
                 </div>
                 
                 <div className="space-y-1 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 font-medium tracking-tight">Progresso</span>
-                    <span className="text-gray-900 dark:text-white font-bold">R$ {(m.progressoAtual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} reservado de R$ {m.valorAlvo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({progressoPct.toFixed(0)}%)</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                      Reservado: R$ {(m.progressoAtual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">
+                      Meta: R$ {m.valorAlvo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
                     <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-1000" style={{ width: `${progressoPct}%` }} />
                   </div>
-                  <div className="flex justify-between text-xs text-gray-400 mt-2">
-                    <span>{progressoPct.toFixed(0)}% concluído</span>
-                    <span>Prazo: {m.prazo ? new Date(m.prazo).toLocaleDateString() : 'N/A'}</span>
+                  <div className="flex justify-between items-center text-xs text-gray-400 mt-2">
+                    <span className="font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-100 dark:border-gray-700">
+                      Falta R$ {Math.max(0, falta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • Prazo: {m.prazo ? new Date(m.prazo).toLocaleDateString() : 'N/A'}
+                    </span>
+                    <span className="font-bold text-indigo-500">{progressoPct.toFixed(0)}%</span>
                   </div>
                 </div>
 
