@@ -286,47 +286,47 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
       const prompt = `
 Você é um classificador de extratos bancários brasileiros.
-IMPORTANTE: O texto abaixo pode ter espaçamentos irregulares ou 
-quebras de linha no meio de palavras — isso é normal em PDFs.
-Interprete o conteúdo pelo contexto, não pela formatação.
+Analise o texto abaixo extraído de um PDF de extrato bancário.
 
-Extraia ABSOLUTAMENTE TODAS as linhas que representem 
-movimentações financeiras (entradas e saídas de dinheiro).
-Se encontrar qualquer valor monetário com data, classifique.
-Não deixe nenhuma transação de fora.
+REGRA PRINCIPAL DE TIPO:
+- Se o valor no texto aparecer com sinal NEGATIVO (ex: -48,90 ou -1.860,32) = DESPESA
+- Se o valor no texto aparecer SEM sinal negativo ou com valor positivo = RECEITA
+- Coluna "Débito" sempre = DESPESA (independente do sinal)
+- Coluna "Crédito" sempre = RECEITA
 
-FORMATO 1 - Santander Empresas:
-Colunas: Data | Histórico | Documento | Valor (R$) | Saldo (R$)
-Valor negativo = despesa, valor positivo = receita
-
-FORMATO 2 - Santander Internet Banking (Pessoa Física):
-Colunas: Data | Descrição | Docto | Situação | Crédito (R$) | Débito (R$) | Saldo (R$)
-Coluna Crédito preenchida = receita
-Coluna Débito preenchida = despesa
+EXEMPLOS DO EXTRATO SANTANDER INTERNET BANKING:
+- "PIX ENVIADO Sandra Feliciano da Silva 000000 -60,00" → DESPESA, valor 60.00
+- "PIX RECEBIDO MT SOLUCOES EM ENERGIA E 325197 3.000,00" → RECEITA, valor 3000.00
+- "OPERACOES CREDITO IMOBILIARIO -1.860,32" → DESPESA, categoria Moradia, valor 1860.32
+- "MENSALIDADE DE SEGURO TOKIO MARINE 000000 -283,77" → DESPESA, categoria Saúde
+- "PAGAMENTO CONTA CELULAR VIVO-PE -49,00" → DESPESA, categoria Telecomunicações
+- "PIX AGENDADO Condominio -220,00" → DESPESA, categoria Moradia
+- "REMUNERACAO APLICACAO AUTOMATICA 0,01" → IGNORAR
+- "IOF" → IGNORAR
 
 REGRAS GERAIS:
-1. IGNORE: IOF, Remuneracao Aplicacao Automatica, Aplicacao Contamax, 
-   Resgate Contamax, Cancelamento Resgate, IOF Adicional
-2. Data DD/MM/AAAA → converter para AAAA-MM-DD
-3. Use valor absoluto (sem sinal negativo) no campo "valor"
-4. Vírgula como decimal: 1.860,32 → 1860.32
+1. IGNORE completamente: IOF, REMUNERACAO APLICACAO AUTOMATICA
+2. PIX ENVIADO = sempre DESPESA
+3. PIX RECEBIDO = sempre RECEITA  
+4. TED RECEBIDA = sempre RECEITA
+5. Data DD/MM/AAAA → converter para AAAA-MM-DD
+6. Use valor absoluto (sem sinal negativo) no campo "valor"
+7. Vírgula como decimal: 1.860,32 → 1860.32
+8. Ponto como separador de milhar: 1.860,32 → 1860.32
 
-CATEGORIAS despesa:
-- Transporte: Uber, 99 Food, posto, combustível, parking, ECO POSTO, POSTO PHENIX
-- Alimentação: mercado, hortifruti, restaurante, pão de açúcar, rei do pirao, mercadinho
-- Moradia: condomínio, crédito imobiliário, OPERACOES CREDITO IMOBILIARIO
-- Saúde: farmácia, médico, Fleury, seguro saúde, TOKIO MARINE
-- Energia: COMPANHIA ENE DE PE, CELPE, NEOENERGIA, Companhia Energetica
-- Telecomunicações: VIVO, claro, tim, oi, BRASIL REDES, USE TELECOMUNICACOES
-- Impostos: IPVA, SEFAZ, IOF, tributos
-- Serviços: contabilidade, RESISTENCIA CONTABIL, CONSELHO REGIONAL, ZOOP, PAGALEVE
-- Fornecedores: FACIL SUPRIMENTOS, SOLFACIL, SOLAR LIFE, OPTATEC
-- Financiamento: AYMORE, debito emprestimo, CEF MATRIZ, ITAU UNIBANCO
-- Pessoal: Pix Enviado para nome de pessoa física
-- Outros: qualquer outro não classificado
+CATEGORIAS para DESPESA:
+- Transporte: Uber, 99 Food, posto, combustível, parking
+- Alimentação: mercado, hortifruti, restaurante, padaria, lanchonete
+- Moradia: condomínio, OPERACOES CREDITO IMOBILIARIO, aluguel
+- Saúde: farmácia, médico, seguro saúde, TOKIO MARINE, plano de saúde
+- Energia: Companhia Energetica, CELPE, NEOENERGIA, COPEL
+- Telecomunicações: VIVO, Claro, TIM, OI, BRASIL REDES
+- Serviços: ZOOP, PAGALEVE, DELTAPAG, contabilidade
+- Pessoal: PIX ENVIADO para nome de pessoa física
+- Outros: qualquer outro não classificado acima
 
-CATEGORIAS receita:
-- Receita Operacional: PIX RECEBIDO, TED RECEBIDA, Cr Cob Bloq
+CATEGORIAS para RECEITA:
+- Receita Operacional: PIX RECEBIDO, TED RECEBIDA, transferência recebida
 - Outros: qualquer outro crédito
 
 Retorne SOMENTE JSON válido, sem markdown, sem explicação:
@@ -334,10 +334,10 @@ Retorne SOMENTE JSON válido, sem markdown, sem explicação:
 {
   "transacoes": [
     {
-      "descricao": "descrição limpa",
-      "valor": 1860.32,
+      "descricao": "descrição limpa sem números de documento",
+      "valor": 60.00,
       "tipo": "despesa",
-      "categoria": "Moradia",
+      "categoria": "Pessoal",
       "data": "2026-05-04"
     }
   ]
