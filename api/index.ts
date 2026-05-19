@@ -240,9 +240,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
             textoBruto = textoExtraido;
             
           } catch (pdfErr: any) {
-            console.error('[pdf2json] Erro:', pdfErr.message);
+            console.error('[pdf2json] Erro completo:', pdfErr);
+            console.error('[pdf2json] Message:', pdfErr.message);
+            console.error('[pdf2json] Stack:', pdfErr.stack);
             return res.status(400).json({ 
-              error: 'Erro ao processar o PDF.' 
+              error: 'Erro ao processar o PDF: ' + pdfErr.message 
             });
           }
         } else if (['csv', 'ofx'].includes(ext || '')) {
