@@ -24,6 +24,8 @@ export const XP_EVENTS = {
   ADICIONAR_RECEITA:   { xp: +10, label: 'Adicionar uma receita',           tipo: 'ganho' as const },
   DIAGNOSTICO_INICIAL: { xp: +30, label: 'Completar diagnóstico inicial',   tipo: 'ganho' as const },
   SALDO_POSITIVO_MES:  { xp: +25, label: 'Fechar o mês com saldo positivo', tipo: 'ganho' as const },
+  RENDA_EXTRA_UNICA:   { xp: +15, label: 'Cadastrar primeira renda extra',  tipo: 'ganho' as const },
+  RENDA_EXTRA_RECORRENTE: { xp: +20, label: 'Cadastrar renda extra recorrente', tipo: 'ganho' as const },
 
   // ── PENALIDADES ──────────────────────────────────────────────────────────
   EXCESSO_DESPESAS_DIA:     { xp: -15, label: '3+ despesas no mesmo dia após alerta de economia',      tipo: 'perda' as const },
@@ -57,6 +59,36 @@ export const getLevelInfo = (xp: number) => {
     ? ((xp - currentLevel.minXp) / (nextLevel.minXp - currentLevel.minXp)) * 100
     : 100;
   return { currentLevel, nextLevel, progress };
+};
+
+// ── Score Financeiro (com Renda Extra) ───────────────────────────────────────
+export const calcularScoreFinanceiro = (
+  receitaFixa: number,
+  totalRendaExtra: number,
+  totalDespesas: number,
+  qtdRendasExtras: number
+) => {
+  const receitaTotal = receitaFixa + totalRendaExtra;
+  
+  if (receitaTotal <= 0) return { score: 0, label: 'Sem dados' };
+  
+  const taxaCompromisso = totalDespesas / receitaTotal;
+  const saldo = receitaTotal - totalDespesas;
+  
+  const calcularScoreBase = (taxa: number) => {
+    if (taxa <= 0.5 && saldo > 0) return { base: 85, lbl: 'Ótimo' };
+    if (taxa <= 0.7 && saldo > 0) return { base: 65, lbl: 'Bom' };
+    if (taxa <= 0.9) return { base: 45, lbl: 'Regular' };
+    return { base: 25, lbl: 'Crítico' };
+  };
+
+  const { base: scoreBase, lbl: label } = calcularScoreBase(taxaCompromisso);
+  
+  // Bônus no score por ter renda diversificada
+  const bonusDiversificacao = qtdRendasExtras > 1 ? 10 : 0;
+  const scoreFinal = Math.min(100, scoreBase + bonusDiversificacao);
+  
+  return { score: scoreFinal, label };
 };
 
 // ── Aplica delta de XP (positivo ou negativo) e persiste no Firestore ────────

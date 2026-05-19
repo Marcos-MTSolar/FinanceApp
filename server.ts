@@ -418,6 +418,8 @@ ${textoExtraido.substring(0, 8000)}
     let totalDespesas = 0;
     let transacoes: any[] = [];
     let metas: any[] = [];
+    let rendasExtras: any[] = [];
+    let totalRendaExtra = 0;
 
     try {
       if (admin.apps.length && req.user?.uid) {
@@ -452,6 +454,15 @@ ${textoExtraido.substring(0, 8000)}
 
         metas = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // 4. Buscar rendas extras
+        const rendaExtraSnap = await adminDb
+          .collection(`rendaExtra/${req.user.uid}/items`)
+          .where('data', '>=', inicioMes.toISOString().split('T')[0])
+          .get();
+
+        rendasExtras = rendaExtraSnap.docs.map(d => d.data());
+        totalRendaExtra = rendasExtras.reduce((s, r) => s + Number(r.valor), 0);
+
         console.log('[Chat] Metas encontradas:', metas.length);
         console.log('[Chat] Dados das metas:', JSON.stringify(metas));
         console.log('[Chat] Metas no prompt:', metas.map(m => m.titulo));
@@ -467,6 +478,8 @@ ${textoExtraido.substring(0, 8000)}
           { data: '2026-05-19', tipo: 'despesa', valor: 1500, descricao: 'Aluguel', categoria: 'Moradia' }
         ];
         metas = [];
+        rendasExtras = [];
+        totalRendaExtra = 0;
       }
     } catch (dbErr) {
       console.error('[/api/groq/chat] Erro ao buscar dados do Firestore:', dbErr);
@@ -501,6 +514,10 @@ DADOS DO USUÁRIO:
 - Despesas do mês: R$ ${totalDespesas.toFixed(2)}
 - Saldo atual: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
 - Renda declarada: R$ ${userData.renda || 'não informada'}
+
+RENDA EXTRA DO MÊS:
+- Total: R$ ${totalRendaExtra.toFixed(2)}
+- Fontes: ${rendasExtras.map(r => `${r.descricao} R$${r.valor}`).join(', ') || 'Nenhuma'}
 
 GASTOS POR CATEGORIA ESTE MÊS:
 ${categoriaOrdenada || 'Nenhum gasto registrado'}

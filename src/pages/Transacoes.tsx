@@ -24,7 +24,8 @@ import {
   Tag,
   Upload,
   MessageCircle,
-  Trophy
+  Trophy,
+  TrendingUp
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -53,6 +54,7 @@ export function Transacoes() {
   const [filterTipo, setFilterTipo] = useState<'todos' | 'receita' | 'despesa'>('todos');
   const [filterCategoria, setFilterCategoria] = useState('todos');
   const [filterPeriodo, setFilterPeriodo] = useState<'este_mes' | 'ultimo_mes' | 'tres_meses' | 'todos'>('este_mes');
+  const [filterOrigem, setFilterOrigem] = useState('todas');
 
   // Modo do perfil do usuário (pessoal ou empresarial)
   const modo = (profile?.modo as 'pessoal' | 'empresarial') || 'pessoal';
@@ -110,11 +112,17 @@ export function Transacoes() {
     };
   }, [user?.uid]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (t: any) => {
     if (!user?.uid) return;
     if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
       try {
-        await deleteDoc(doc(db, `transacoes/${user.uid}/items`, id));
+        await deleteDoc(doc(db, `transacoes/${user.uid}/items`, t.id));
+        
+        if (t.origem === 'renda_extra' && t.rendaExtraId) {
+          if (window.confirm('Deseja remover também a renda extra vinculada?')) {
+            await deleteDoc(doc(db, `rendaExtra/${user.uid}/items`, t.rendaExtraId));
+          }
+        }
       } catch (err) {
         console.error('Erro ao excluir transação:', err);
         alert('Erro ao excluir transação. Tente novamente.');
@@ -194,7 +202,15 @@ export function Transacoes() {
       }
     }
 
-    return matchSearch && matchTipo && matchCategoria && matchPeriodo;
+    let matchOrigem = true;
+    if (filterOrigem !== 'todas') {
+      const isMeta = t.origem === 'meta' || t.categoria === 'Meta';
+      if (filterOrigem === 'manual') matchOrigem = !t.origem || t.origem === 'manual';
+      else if (filterOrigem === 'meta') matchOrigem = isMeta;
+      else matchOrigem = t.origem === filterOrigem;
+    }
+
+    return matchSearch && matchTipo && matchCategoria && matchPeriodo && matchOrigem;
   });
 
   const navItems = [
@@ -202,6 +218,7 @@ export function Transacoes() {
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
+    { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
@@ -343,7 +360,7 @@ export function Transacoes() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -404,6 +421,21 @@ export function Transacoes() {
                   <option value="todos">Todo o Histórico</option>
                 </select>
               </div>
+
+              <div className="relative">
+                <Tag className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={filterOrigem}
+                  onChange={(e) => setFilterOrigem(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-950 border border-gray-800 rounded-2xl text-xs font-medium text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all appearance-none"
+                >
+                  <option value="todas">Todas Origens</option>
+                  <option value="manual">Manual</option>
+                  <option value="importacao">Importado</option>
+                  <option value="renda_extra">Renda Extra</option>
+                  <option value="meta">Meta</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -454,9 +486,18 @@ export function Transacoes() {
                           </div>
                         </td>
                         <td className="py-4">
-                          <span className="px-3 py-1 bg-gray-950 border border-gray-800/80 rounded-xl text-xs text-gray-300 font-semibold shadow-sm">
-                            {item.categoria || 'Outros'}
-                          </span>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span className="px-3 py-1 bg-gray-950 border border-gray-800/80 rounded-xl text-xs text-gray-300 font-semibold shadow-sm">
+                              {item.categoria || 'Outros'}
+                            </span>
+                            {(() => {
+                              const isMeta = item.origem === 'meta' || item.categoria === 'Meta';
+                              if (item.origem === 'renda_extra') return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">Renda Extra</span>;
+                              if (isMeta) return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">Meta</span>;
+                              if (item.origem === 'importacao') return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wider">Importado</span>;
+                              return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-500/10 text-gray-400 border border-gray-500/20 uppercase tracking-wider">Manual</span>;
+                            })()}
+                          </div>
                         </td>
                         <td className="py-4">
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
@@ -474,7 +515,7 @@ export function Transacoes() {
                         </td>
                         <td className="py-4 text-center">
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item)}
                             title="Excluir Transação"
                             className="p-2 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all opacity-70 group-hover:opacity-100"
                           >

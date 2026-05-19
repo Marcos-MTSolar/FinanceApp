@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where, get
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { HeaderXPBar } from '../components/HeaderXPBar';
+import { calcularScoreFinanceiro } from '../lib/gamification';
 import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } from '../components/Dashboard';
 import { NewTransactionModal } from '../components/NewTransactionModal';
 import { NotificacoesDropdown, criarNotificacao } from '../components/NotificacoesDropdown';
@@ -40,6 +41,7 @@ export function Dashboard() {
   const [user, setUser] = useState(auth.currentUser);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [metas, setMetas] = useState<any[]>([]);
+  const [rendasExtras, setRendasExtras] = useState<any[]>([]);
   const [diagnostico, setDiagnostico] = useState<any>(null);
   const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,7 @@ export function Dashboard() {
 
     let unsubTrans = () => {};
     let unsubMetas = () => {};
+    let unsubRenda = () => {};
     let unsubDiag = () => {};
 
     try {
@@ -118,6 +121,14 @@ export function Dashboard() {
         console.error('Erro ao buscar metas do Firestore no Dashboard:', error);
       });
 
+      // Renda Extra
+      const qRenda = query(collection(db, `rendaExtra/${user.uid}/items`));
+      unsubRenda = onSnapshot(qRenda, (snapshot) => {
+        setRendasExtras(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Erro ao buscar renda extra no Dashboard:', error);
+      });
+
       // Diagnóstico / Score
       unsubDiag = onSnapshot(doc(db, 'diagnostico', user.uid), (docSnap) => {
         if (docSnap.exists()) {
@@ -134,6 +145,7 @@ export function Dashboard() {
     return () => {
       unsubTrans();
       unsubMetas();
+      unsubRenda();
       unsubDiag();
     };
   }, [user?.uid, modo]);
@@ -301,24 +313,19 @@ export function Dashboard() {
       };
     });
 
-  const calcularScore = (receitas: number, despesas: number, renda: number) => {
-    const rendaBase = renda > 0 ? renda : receitas;
-    
-    if (rendaBase === 0) return { score: 0, label: 'Sem dados' };
-    
-    const taxaCompromisso = despesas / rendaBase;
-    const saldo = receitas - despesas;
-    
-    if (taxaCompromisso <= 0.5 && saldo > 0) return { score: 85, label: 'Ótimo' };
-    if (taxaCompromisso <= 0.7 && saldo > 0) return { score: 65, label: 'Bom' };
-    if (taxaCompromisso <= 0.9) return { score: 45, label: 'Regular' };
-    return { score: 25, label: 'Crítico' };
-  };
+  // Cálculos Renda Extra
+  const rendasExtrasMes = rendasExtras.filter(r => isCurrentMonth(r.data));
+  const totalRendaExtra = rendasExtrasMes.reduce((acc, r) => acc + Number(r.valor), 0);
+  const receitaFixa = Math.max(0, receitasMes - totalRendaExtra);
+  const topFontes = [...rendasExtrasMes]
+    .sort((a, b) => Number(b.valor) - Number(a.valor))
+    .slice(0, 3);
 
-  const scoreData = calcularScore(
-    receitasMes,
+  const scoreData = calcularScoreFinanceiro(
+    receitaFixa,
+    totalRendaExtra,
     despesasMes,
-    Number(profile?.renda) || Number(diagnostico?.respostas?.rendaVenda) || 0
+    rendasExtrasMes.length
   );
 
   const navItems = [
@@ -326,6 +333,7 @@ export function Dashboard() {
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
+    { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
@@ -626,13 +634,39 @@ export function Dashboard() {
                   <h3 className="text-3xl font-extrabold text-emerald-400 tracking-tight">
                     {loading ? 'Carregando...' : formatCurrency(receitasMes)}
                   </h3>
-                  <div className="flex items-center gap-2 mt-3 text-xs text-emerald-400 font-medium">
-                    <span className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                      <span>Mês atual</span>
-                    </span>
-                    <span className="text-gray-500">meta de receita</span>
+                  <div className="flex flex-col gap-1.5 mt-3 text-xs font-medium border-t border-gray-800/60 pt-3">
+                    <div className="flex justify-between items-center text-gray-400">
+                      <span>Receita Fixa:</span>
+                      <span className="text-emerald-400 font-bold">{formatCurrency(receitaFixa)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-400">
+                      <span>Renda Extra:</span>
+                      <span className="text-emerald-400 font-bold">{formatCurrency(totalRendaExtra)}</span>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Card - Fontes de Renda Extra */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-amber-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-amber-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Fontes de Renda Extra</span>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {topFontes.length > 0 ? (
+                    topFontes.map((f, i) => (
+                      <div key={i} className="flex justify-between items-center text-xs">
+                        <span className="text-gray-300 truncate pr-2 font-medium">{f.descricao}</span>
+                        <span className="text-amber-400 font-bold">{formatCurrency(Number(f.valor))}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-gray-500 italic py-2">Nenhuma renda extra no mês.</div>
+                  )}
                 </div>
               </div>
 

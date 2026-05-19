@@ -15,7 +15,8 @@ import {
   Shield, 
   Menu, 
   X,
-  Trophy
+  Trophy,
+  TrendingUp
 } from 'lucide-react';
 
 export function ChatPage() {
@@ -50,6 +51,7 @@ export function ChatPage() {
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
+    { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];

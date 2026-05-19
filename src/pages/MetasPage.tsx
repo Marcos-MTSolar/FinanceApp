@@ -21,7 +21,8 @@ import {
   Lightbulb,
   CalendarClock,
   CheckCircle2,
-  Calculator
+  Calculator,
+  TrendingUp
 } from 'lucide-react';
 
 export function MetasPage() {
@@ -57,6 +58,7 @@ export function MetasPage() {
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
     { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
+    { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];

@@ -46,6 +46,7 @@ import { NiveisPage } from './pages/NiveisPage';
 import { Simulador } from './components/Simulador';
 import { Login } from './pages/Login';
 import { Toaster } from 'react-hot-toast';
+import { RendaExtra } from './pages/RendaExtra';
 import { FinanceChat } from './components/FinanceChat';
 
 export default function App() {
@@ -94,6 +95,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/renda-extra"
+                element={
+                  <ProtectedRoute>
+                    <RendaExtra />
                   </ProtectedRoute>
                 }
               />
