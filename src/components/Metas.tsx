@@ -304,33 +304,35 @@ export function Metas() {
                            const valorAporte = Number(val);
                            const batch = writeBatch(db);
 
-                           // Atualiza o progressoAtual da meta
+                           // 1. Atualiza progressoAtual da meta
                            const metaRef = doc(db, `metas/${user.uid}/items`, m.id);
                            batch.update(metaRef, {
                              progressoAtual: increment(valorAporte)
                            });
 
-                           // Cria transação de despesa vinculada à meta
+                           // 2. Cria transação de despesa vinculada
                            const transacaoRef = doc(collection(db, `transacoes/${user.uid}/items`));
                            batch.set(transacaoRef, {
-                             descricao: `Reserva: ${m.titulo}`,
-                             valor: valorAporte,
+                             descricao: `Reserva para meta: ${m.titulo}`,
+                             valor: Number(valorAporte),
                              tipo: 'despesa',
                              categoria: 'Meta',
                              data: new Date().toISOString().split('T')[0],
+                             origem: 'meta',
                              metaId: m.id,
                              criadoEm: serverTimestamp()
                            });
 
                            await batch.commit();
+                           toast.success(`R$ ${valorAporte} reservado para "${m.titulo}"!`);
 
                            const novoProg = (m.progressoAtual || 0) + valorAporte;
                            if (novoProg >= m.valorAlvo) {
                              handleComplete(m.id);
                            }
                          } catch (err) {
-                           console.error("Erro ao atualizar progresso da meta e criar transação:", err);
-                           alert("Erro ao atualizar progresso.");
+                           console.error("Erro ao adicionar valor à meta e criar transação:", err);
+                           toast.error("Erro ao reservar valor para a meta.");
                          }
                       }
                     }}
