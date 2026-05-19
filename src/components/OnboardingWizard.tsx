@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 import { addXp } from '../lib/gamification';
+import toast from 'react-hot-toast';
 
 export function OnboardingWizard() {
   const { user, profile, switchMode } = useAuth();
@@ -75,6 +76,7 @@ export function OnboardingWizard() {
 
       // Gamification Reward: Diagnostic (+100 XP)
       await addXp(user.uid, 100);
+      toast.success('+100 XP! Diagnóstico inicial concluído com sucesso 🎉');
 
       if (profile?.modo !== modo) {
         await switchMode(modo);

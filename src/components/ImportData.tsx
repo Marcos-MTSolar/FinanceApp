@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import Tesseract from 'tesseract.js';
 import { addXp } from '../lib/gamification';
 import { usePlan } from '../hooks/usePlan';
+import toast from 'react-hot-toast';
 
 type ImportStep = 'upload' | 'processing' | 'preview' | 'success';
 
@@ -156,8 +157,9 @@ export function ImportData() {
       }
       await batch.commit();
 
-      // Gamification Reward: Importar extrato (+50 XP)
-      await addXp(user.uid, 50);
+      // Gamification Reward: Importar extrato (+20 XP)
+      await addXp(user.uid, 20);
+      toast.success('+20 XP! Extrato importado com sucesso 🎉');
 
       // Salva o contador ANTES de limpar as transações
       setSavedCount(qtdParaSalvar);

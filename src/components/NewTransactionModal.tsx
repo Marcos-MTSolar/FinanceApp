@@ -3,6 +3,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
 import { addXp } from '../lib/gamification';
+import toast from 'react-hot-toast';
 
 interface NewTransactionModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
       });
 
       await addXp(userId, 10); // +10 XP por transação
+      toast.success('+10 XP! Transação registrada com sucesso 💰');
 
       // Reset dos campos e fecha o modal
       handleClose();

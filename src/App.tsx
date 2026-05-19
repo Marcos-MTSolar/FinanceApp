@@ -45,6 +45,7 @@ import { ChatPage } from './pages/ChatPage';
 import { NiveisPage } from './pages/NiveisPage';
 import { Simulador } from './components/Simulador';
 import { Login } from './pages/Login';
+import { Toaster } from 'react-hot-toast';
 import { FinanceChat } from './components/FinanceChat';
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
       <AuthProvider>
         <PlanProvider>
           <Router>
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route

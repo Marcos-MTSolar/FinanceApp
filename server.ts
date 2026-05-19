@@ -413,11 +413,86 @@ ${textoExtraido.substring(0, 8000)}
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const top5 = (context.transacoesRecentes || []).slice(0, 5)
-      .map((t: any) => `${t.descricao}: R$${t.valor}`).join(', ');
-    const metasAtivas = (context.metas || []).filter((m: any) => !m.concluida).slice(0, 3)
-      .map((m: any) => m.titulo).join(', ');
-    const systemPrompt = `Você é um consultor financeiro pessoal objetivo. Dados do usuário: Score ${context.score ?? 'N/A'} | Renda R$${context.renda ?? 0} | Saldo R$${context.economias ?? 0} | Dívidas R$${context.dividas ?? 0}${top5 ? ` | Últimas transações: ${top5}` : ''}${metasAtivas ? ` | Metas ativas: ${metasAtivas}` : ''}. Responda em português de forma direta e prática. Use linguagem simples, sem markdown excessivo.`;
+    let userData: any = {};
+    let totalReceitas = 0;
+    let totalDespesas = 0;
+    let transacoes: any[] = [];
+    let metas: any[] = [];
+
+    try {
+      if (admin.apps.length && req.user?.uid) {
+        const adminDb = admin.firestore();
+
+        // 1. Buscar dados do usuário
+        const userDoc = await adminDb.doc(`users/${req.user.uid}`).get();
+        userData = userDoc.data() || {};
+
+        // 2. Buscar transações do mês atual
+        const agora = new Date();
+        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+
+        const transacoesSnap = await adminDb
+          .collection(`transacoes/${req.user.uid}/items`)
+          .where('data', '>=', inicioMes.toISOString().split('T')[0])
+          .orderBy('data', 'desc')
+          .limit(20)
+          .get();
+
+        transacoes = transacoesSnap.docs.map(d => d.data());
+        const receitas = transacoes.filter(t => t.tipo === 'receita');
+        const despesas = transacoes.filter(t => t.tipo === 'despesa');
+        totalReceitas = receitas.reduce((s, t) => s + (Number(t.valor) || 0), 0);
+        totalDespesas = despesas.reduce((s, t) => s + (Number(t.valor) || 0), 0);
+
+        // 3. Buscar metas ativas
+        const metasSnap = await adminDb
+          .collection(`metas/${req.user.uid}/items`)
+          .where('status', '==', 'ativa')
+          .get();
+        metas = metasSnap.docs.map(d => d.data());
+      } else {
+        // Fallback mock
+        userData = { nome: 'Usuário Dev', nivel: 1, xp: 50, renda: 4500 };
+        totalReceitas = 3000;
+        totalDespesas = 1500;
+        transacoes = [
+          { data: '2026-05-18', tipo: 'receita', valor: 3000, descricao: 'Salário', categoria: 'Salário' },
+          { data: '2026-05-19', tipo: 'despesa', valor: 1500, descricao: 'Aluguel', categoria: 'Moradia' }
+        ];
+        metas = [];
+      }
+    } catch (dbErr) {
+      console.error('[/api/groq/chat] Erro ao buscar dados do Firestore:', dbErr);
+      userData = { nome: 'Usuário', nivel: 1, xp: 0, renda: 0 };
+    }
+
+    const systemPrompt = `
+Você é um assistente financeiro pessoal do FinanceAI.
+Responda SOMENTE com base nos dados abaixo do usuário.
+Não invente informações. Se não tiver dados suficientes, diga que o usuário precisa registrar mais transações.
+Seja direto, objetivo e fale em português brasileiro.
+
+=== DADOS FINANCEIROS DO USUÁRIO ===
+Nome: ${userData.nome || 'Usuário'}
+Nível: ${userData.nivel || 1} | XP: ${userData.xp || 0}
+Renda declarada: R$ ${userData.renda || 0}
+
+MÊS ATUAL:
+- Total de receitas: R$ ${totalReceitas.toFixed(2)}
+- Total de despesas: R$ ${totalDespesas.toFixed(2)}
+- Saldo do mês: R$ ${(totalReceitas - totalDespesas).toFixed(2)}
+
+ÚLTIMAS TRANSAÇÕES:
+${transacoes.slice(0, 10).map(t => 
+  `- ${t.data} | ${t.tipo.toUpperCase()} | R$ ${t.valor} | ${t.descricao} (${t.categoria})`
+).join('\n')}
+
+METAS ATIVAS:
+${metas.length > 0 
+  ? metas.map(m => `- ${m.titulo || m.descricao}: R$ ${m.progressoAtual || m.valorAtual || 0} / R$ ${m.valorAlvo}`).join('\n')
+  : '- Nenhuma meta cadastrada'}
+===================================
+`;
 
     try {
       console.log("[/api/groq/chat] Iniciando chamada ao Groq com", mensagensLimitadas.length, "mensagens (limitado de", messages.length, ")");

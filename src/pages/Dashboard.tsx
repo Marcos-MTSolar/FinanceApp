@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { HeaderXPBar } from '../components/HeaderXPBar';
@@ -41,7 +41,6 @@ export function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [metas, setMetas] = useState<any[]>([]);
   const [diagnostico, setDiagnostico] = useState<any>(null);
-  const [alertasFlash, setAlertasFlash] = useState<string[]>([]);
   const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
 
@@ -155,7 +154,27 @@ export function Dashboard() {
         });
         const data = await res.json();
         if (data.alertas && data.alertas.length > 0) {
-          setAlertasFlash(data.alertas);
+          for (const alertStr of data.alertas) {
+            // Remove "Groq AI" ou qualquer variação semelhante da mensagem
+            const cleanAlert = alertStr.replace(/Groq\s*AI:?/gi, '').trim();
+            if (!cleanAlert) continue;
+
+            // Evita duplicados fazendo uma busca pontual
+            const qExist = query(
+              collection(db, `notificacoes/${user.uid}/items`),
+              where('mensagem', '==', cleanAlert),
+              where('tipo', '==', 'alerta')
+            );
+            const snap = await getDocs(qExist);
+            if (snap.empty) {
+              await addDoc(collection(db, `notificacoes/${user.uid}/items`), {
+                mensagem: cleanAlert,
+                lida: false,
+                criadoEm: serverTimestamp(),
+                tipo: 'alerta'
+              });
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to fetch smart alerts:", e);
@@ -237,24 +256,21 @@ export function Dashboard() {
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   };
 
-  let saldoTotal = 0;
   let receitasMes = 0;
   let despesasMes = 0;
 
   transactions.forEach((t) => {
     const val = Number(t.valor) || 0;
-    if (t.tipo === 'receita') {
-      saldoTotal += val;
-      if (isCurrentMonth(t.data)) {
+    if (isCurrentMonth(t.data)) {
+      if (t.tipo === 'receita') {
         receitasMes += val;
-      }
-    } else {
-      saldoTotal -= Math.abs(val);
-      if (isCurrentMonth(t.data)) {
+      } else {
         despesasMes += Math.abs(val);
       }
     }
   });
+
+  const saldoTotal = receitasMes - despesasMes;
 
   const chartData = transactions
     .slice(0, 10).reverse()
@@ -601,8 +617,6 @@ export function Dashboard() {
               </div>
             </div>
           )}
-
-          <AlertasInteligentes alertas={alertasFlash} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">

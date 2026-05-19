@@ -8,6 +8,7 @@ import { addXp, getLevelInfo } from '../lib/gamification';
 import { criarNotificacao } from './NotificacoesDropdown';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
+import toast from 'react-hot-toast';
 
 export function Metas() {
   const { user, profile } = useAuth();
@@ -106,6 +107,7 @@ export function Metas() {
       const nivelAntes = getLevelInfo(xpAntes).currentLevel.level;
 
       await addXp(uid, 500);
+      toast.success('🏆 +500 XP! Meta concluída com sucesso!');
 
       // Captura novo nível após adicionar XP
       const snapDepois = await getDoc(doc(db, 'users', uid));

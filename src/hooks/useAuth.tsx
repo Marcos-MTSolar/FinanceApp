@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 
 export type AppMode = 'pessoal' | 'empresarial';
@@ -32,15 +32,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unsubProfile: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        const docRef = doc(db, 'users', firebaseUser.uid);
+        
         try {
-          const docRef = doc(db, 'users', firebaseUser.uid);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
-          } else {
+          if (!docSnap.exists()) {
             const newProfile: UserProfile = {
               nome: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
               email: firebaseUser.email || '',
@@ -51,17 +52,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               criadoEm: new Date().toISOString(),
             };
             await setDoc(docRef, newProfile);
-            setProfile(newProfile);
           }
         } catch (err) {
-          console.error('Erro ao buscar perfil do usuário:', err);
+          console.error('Erro ao buscar/criar perfil inicial do usuário:', err);
         }
+
+        // Configura o listener em tempo real
+        unsubProfile = onSnapshot(docRef, (snap) => {
+          if (snap.exists()) {
+            setProfile(snap.data() as UserProfile);
+          }
+          setLoading(false);
+        }, (err) => {
+          console.error('Erro no listener de perfil em tempo real:', err);
+          setLoading(false);
+        });
       } else {
+        if (unsubProfile) {
+          unsubProfile();
+          unsubProfile = null;
+        }
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+      if (unsubProfile) {
+        unsubProfile();
+      }
+    };
   }, []);
 
   const switchMode = async (modo: AppMode) => {

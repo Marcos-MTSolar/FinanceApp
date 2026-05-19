@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, where, onSnapshot, writeBatch, getDocs, addDoc, serverTimestamp, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, writeBatch, getDocs, addDoc, serverTimestamp, doc, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { Bell, X, CheckCheck } from 'lucide-react';
 
@@ -8,6 +8,7 @@ interface Notificacao {
   mensagem: string;
   lida: boolean;
   criadoEm: any;
+  tipo?: string;
 }
 
 interface NotificacoesCloakProps {
@@ -63,6 +64,15 @@ export function NotificacoesDropdown({ userId }: NotificacoesCloakProps) {
       await batch.commit();
     } catch (err) {
       console.error('Erro ao marcar notificações como lidas:', err);
+    }
+  };
+
+  const marcarComoLida = async (id: string) => {
+    if (!userId) return;
+    try {
+      await updateDoc(doc(db, `notificacoes/${userId}/items`, id), { lida: true });
+    } catch (err) {
+      console.error('Erro ao marcar notificação como lida:', err);
     }
   };
 
@@ -123,14 +133,24 @@ export function NotificacoesDropdown({ userId }: NotificacoesCloakProps) {
               </div>
             ) : (
               notificacoes.map(n => (
-                <div key={n.id} className="px-4 py-3 hover:bg-gray-800/50 transition-colors">
-                  <div className="flex gap-2 items-start">
-                    <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
+                <div key={n.id} className="px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-start justify-between gap-2 group">
+                  <div className="flex gap-2 items-start flex-1 min-w-0">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.tipo === 'alerta' ? 'bg-rose-500' : 'bg-indigo-500'}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-200 leading-relaxed">{n.mensagem}</p>
+                      <span className={`text-[10px] font-bold block mb-0.5 ${n.tipo === 'alerta' ? 'text-rose-400' : 'text-indigo-400'}`}>
+                        {n.tipo === 'alerta' ? 'Alerta Financeiro' : 'Notificação'}
+                      </span>
+                      <p className="text-xs text-gray-200 leading-relaxed break-words">{n.mensagem}</p>
                       <p className="text-[10px] text-gray-500 mt-1">{formatTime(n.criadoEm)}</p>
                     </div>
                   </div>
+                  <button
+                    onClick={() => marcarComoLida(n.id)}
+                    className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors flex-shrink-0"
+                    title="Marcar como lida"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))
             )}
@@ -156,13 +176,14 @@ export function NotificacoesDropdown({ userId }: NotificacoesCloakProps) {
 
 // ── Utilitário para criar notificações ──────────────────────────────────────
 
-export async function criarNotificacao(userId: string, mensagem: string) {
+export async function criarNotificacao(userId: string, mensagem: string, tipo: string = 'info') {
   if (!userId) return;
   try {
     await addDoc(collection(db, `notificacoes/${userId}/items`), {
       mensagem,
       lida: false,
-      criadoEm: serverTimestamp()
+      criadoEm: serverTimestamp(),
+      tipo
     });
   } catch (err) {
     console.error('Erro ao criar notificação:', err);
