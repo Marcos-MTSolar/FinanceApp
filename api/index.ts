@@ -447,19 +447,16 @@ ${textoExtraido.substring(0, 8000)}
         totalDespesas = despesas.reduce((s, t) => s + (Number(t.valor) || 0), 0);
 
         // 3. Buscar metas ativas
-        // Tenta buscar metas sem filtro para ver o que existe
         const metasSnap = await adminDb
           .collection(`metas/${req.user.uid}/items`)
-          .limit(10)
+          .where('status', '==', 'ativa')
           .get();
 
         metas = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Log para ver a estrutura real dos documentos
-        console.log('[Chat] Estrutura das metas:', JSON.stringify(metas.slice(0, 2)));
-
         console.log('[Chat] Metas encontradas:', metas.length);
         console.log('[Chat] Dados das metas:', JSON.stringify(metas));
+        console.log('[Chat] Metas no prompt:', metas.map(m => m.titulo));
         console.log('[Chat] Transações encontradas:', transacoes.length);
         console.log('[Chat] Receitas:', totalReceitas, '| Despesas:', totalDespesas);
       } else {
@@ -478,7 +475,8 @@ ${textoExtraido.substring(0, 8000)}
       userData = { nome: 'Usuário', nivel: 1, xp: 0, renda: 0 };
     }
 
-    const systemPrompt = `
+    const systemPrompt = `INSTRUÇÃO CRÍTICA: Responda em NO MÁXIMO 2 frases. Nada mais. Sem listas. Sem títulos. Sem introduções. Use os valores exatos dos dados fornecidos.
+
 Você é um assistente financeiro do FinanceAI. 
 Responda em no máximo 3 frases curtas e diretas.
 Use APENAS os números abaixo. Não invente nada.
@@ -498,12 +496,14 @@ ${transacoes.slice(0, 8).map(t => {
   return `${data} ${t.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA'} R$${t.valor} ${t.descricao}`;
 }).join('\n') || 'Nenhuma transação registrada'}
 
-METAS:
+METAS ATIVAS:
 ${metas.length > 0
-  ? metas.map(m =>
-  `"${m.titulo || m.descricao}" - falta R$ ${(Number(m.valorAlvo) - Number(m.progressoAtual || m.valorAtual || 0)).toFixed(2)} de R$ ${m.valorAlvo}`
-  ).join('\n')
-  : 'Nenhuma meta cadastrada'}
+  ? metas.map(m => {
+      const falta = Number(m.valorAlvo) - Number(m.progressoAtual || 0);
+      const prazo = m.prazo || 'sem prazo';
+      return `- "${m.titulo}": meta R$${m.valorAlvo}, acumulado R$${m.progressoAtual || 0}, falta R$${falta.toFixed(2)}, prazo ${prazo}`;
+    }).join('\n')
+  : '- Nenhuma meta cadastrada'}
 `;
 
     console.log('=== SYSTEM PROMPT ENVIADO ===');
@@ -513,13 +513,13 @@ ${metas.length > 0
     try {
       console.log("[/api/groq/chat] Iniciando chamada ao Groq com", mensagensLimitadas.length, "mensagens (limitado de", messages.length, ")");
       const stream = await groq.chat.completions.create({
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: systemPrompt },
           ...mensagensLimitadas
         ],
         temperature: 0.3,
-        max_tokens: 300,  // limita a resposta a ~4 linhas
+        max_tokens: 150,  // limita a resposta a ~4 linhas
         stream: true,
       });
 

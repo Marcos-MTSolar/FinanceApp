@@ -66,7 +66,12 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
 
     try {
       const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
-      history.push({ role: 'user', content: userMessage });
+      
+      // Se a última mensagem do histórico já for a nova mensagem do usuário (sincronizada pelo listener), não duplica
+      const lastMessage = history[history.length - 1];
+      if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== userMessage) {
+        history.push({ role: 'user', content: userMessage });
+      }
 
       const auth = getAuth();
       const token = await auth.currentUser?.getIdToken();
