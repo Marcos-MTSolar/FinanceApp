@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
 import { getAuth } from 'firebase/auth';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2 } from 'lucide-react';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, deleteDoc, writeBatch, increment } from 'firebase/firestore';
+import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2, PiggyBank } from 'lucide-react';
 import { addXp, getLevelInfo } from '../lib/gamification';
 import { criarNotificacao } from './NotificacoesDropdown';
 import Confetti from 'react-confetti';
@@ -267,9 +267,15 @@ export function Metas() {
               <div key={m.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-indigo-100 dark:border-gray-700 hover:shadow-lg transition">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span className="text-xs font-semibold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-md">
-                      {m.categoria}
-                    </span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="text-xs font-semibold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-md">
+                        {m.categoria}
+                      </span>
+                      <span className="text-xs font-semibold px-2 py-1 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-md flex items-center gap-1">
+                        <PiggyBank className="w-3.5 h-3.5" />
+                        Reservado no saldo
+                      </span>
+                    </div>
                     <h4 className="font-bold text-gray-900 dark:text-white mt-2 leading-tight">{m.titulo}</h4>
                   </div>
                   <Target className="w-5 h-5 text-indigo-400" />
@@ -278,7 +284,7 @@ export function Metas() {
                 <div className="space-y-1 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500 font-medium tracking-tight">Progresso</span>
-                    <span className="text-gray-900 dark:text-white font-bold">R$ {m.progressoAtual?.toLocaleString() || 0} / R$ {m.valorAlvo?.toLocaleString()}</span>
+                    <span className="text-gray-900 dark:text-white font-bold">R$ {(m.progressoAtual || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} reservado de R$ {m.valorAlvo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({progressoPct.toFixed(0)}%)</span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-1000" style={{ width: `${progressoPct}%` }} />
@@ -293,15 +299,37 @@ export function Metas() {
                   <button 
                     onClick={async () => {
                       const val = prompt('Quanto adicionar de progresso? (R$)', '100');
-                      if (val && !isNaN(Number(val)) && user?.uid) {
+                      if (val && !isNaN(Number(val)) && Number(val) > 0 && user?.uid) {
                          try {
-                           const novoProg = (m.progressoAtual || 0) + Number(val);
-                           await updateDoc(doc(db, `metas/${user.uid}/items`, m.id), { progressoAtual: novoProg });
+                           const valorAporte = Number(val);
+                           const batch = writeBatch(db);
+
+                           // Atualiza o progressoAtual da meta
+                           const metaRef = doc(db, `metas/${user.uid}/items`, m.id);
+                           batch.update(metaRef, {
+                             progressoAtual: increment(valorAporte)
+                           });
+
+                           // Cria transação de despesa vinculada à meta
+                           const transacaoRef = doc(collection(db, `transacoes/${user.uid}/items`));
+                           batch.set(transacaoRef, {
+                             descricao: `Reserva: ${m.titulo}`,
+                             valor: valorAporte,
+                             tipo: 'despesa',
+                             categoria: 'Meta',
+                             data: new Date().toISOString().split('T')[0],
+                             metaId: m.id,
+                             criadoEm: serverTimestamp()
+                           });
+
+                           await batch.commit();
+
+                           const novoProg = (m.progressoAtual || 0) + valorAporte;
                            if (novoProg >= m.valorAlvo) {
                              handleComplete(m.id);
                            }
                          } catch (err) {
-                           console.error("Erro ao atualizar progresso da meta:", err);
+                           console.error("Erro ao atualizar progresso da meta e criar transação:", err);
                            alert("Erro ao atualizar progresso.");
                          }
                       }
