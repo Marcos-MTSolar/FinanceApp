@@ -105,7 +105,12 @@ export function ImportData() {
       setTransactions(
         classificarData.transacoes.map((t: any, i: number) => ({
           id: `temp_${i}`,
-          ...t
+          descricao: t.descricao,
+          valor: Number(t.valor) || 0,
+          data: t.data,
+          categoria: t.categoria,
+          tipo: t.tipo || 'despesa',
+          recorrente: !!t.recorrente
         }))
       );
       setStep('preview');
@@ -177,8 +182,8 @@ export function ImportData() {
   };
 
   const totais = {
-    receitas: transactions.filter(t => t.valor > 0).reduce((acc, t) => acc + t.valor, 0),
-    despesas: transactions.filter(t => t.valor < 0).reduce((acc, t) => acc + Math.abs(t.valor), 0),
+    receitas: transactions.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0),
+    despesas: transactions.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0),
     qtd: transactions.length
   };
 
@@ -250,6 +255,7 @@ export function ImportData() {
                   <tr>
                     <th className="px-6 py-4 font-semibold">Data</th>
                     <th className="px-6 py-4 font-semibold w-1/3">Descrição (Editável)</th>
+                    <th className="px-6 py-4 font-semibold">Tipo</th>
                     <th className="px-6 py-4 font-semibold">Valor</th>
                     <th className="px-6 py-4 font-semibold">Categoria</th>
                     <th className="px-6 py-4 font-semibold text-center">Recorrente</th>
@@ -275,7 +281,19 @@ export function ImportData() {
                           className="bg-transparent text-gray-900 dark:text-white border-0 outline-none w-full focus:ring-1 focus:ring-indigo-500 rounded px-1"
                         />
                       </td>
-                      <td className={`px-6 py-3 font-semibold ${t.valor > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className="px-6 py-3">
+                        <select 
+                          value={t.tipo || 'despesa'}
+                          onChange={(e) => updateTransaction(t.id, 'tipo', e.target.value)}
+                          className={`bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 text-xs rounded-md focus:ring-indigo-500 focus:border-indigo-500 py-1 font-semibold ${
+                            (t.tipo || 'despesa') === 'receita' ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                          }`}
+                        >
+                          <option value="receita">Receita</option>
+                          <option value="despesa">Despesa</option>
+                        </select>
+                      </td>
+                      <td className={`px-6 py-3 font-semibold ${t.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
                         <div className="flex items-center">
                           <span className="mr-1">R$</span>
                           <input 
