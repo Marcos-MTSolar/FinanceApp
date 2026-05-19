@@ -259,6 +259,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         console.log(`[Importação] textoBruto extraído. Tamanho original: ${textoBruto.length} caracteres.`);
         textoExtraido = textoBruto.substring(0, 8000);
         console.log(`[Importação] textoExtraido que será enviado à IA: ${textoExtraido.length} caracteres.`);
+        
+        console.log('=== AMOSTRA TEXTO PARA GROQ ===');
+        console.log(textoExtraido.substring(0, 800));
+        console.log('================================');
 
         const temPadraoExtrato = 
           textoExtraido.includes('Pix') || 
