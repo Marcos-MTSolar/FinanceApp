@@ -284,6 +284,11 @@ export function Dashboard() {
 
   const saldoTotal = receitasMes - despesasMes;
 
+  // Calcular total reservado em metas (apenas mês atual para o card)
+  const totalReservadoMetas = transactions
+    .filter(t => isCurrentMonth(t.data) && (t.categoria === 'Meta' || t.origem === 'meta'))
+    .reduce((s, t) => s + Number(t.valor), 0);
+
   // Buscar transações dos últimos 30/60/90 dias do Firestore
   const hoje = new Date();
   const diasAtras = new Date();
@@ -599,11 +604,11 @@ export function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6">
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Saldo Total</span>
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Saldo Disponível</span>
                   <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400">
                     <Wallet className="w-5 h-5" />
                   </div>
@@ -618,6 +623,9 @@ export function Dashboard() {
                       <span>Em tempo real</span>
                     </span>
                     <span className="text-gray-500">Firestore sync</span>
+                  </div>
+                  <div className="mt-2.5 text-[10px] text-gray-400/80 font-medium italic">
+                    (inclui {formatCurrency(totalReservadoMetas)} reservados em metas)
                   </div>
                 </div>
               </div>
@@ -688,6 +696,29 @@ export function Dashboard() {
                       <span>Mês atual</span>
                     </span>
                     <span className="text-gray-500">dentro do orçamento</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card - Reservado em Metas */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-sky-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-sky-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Reservado em Metas</span>
+                  <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-sky-400">
+                    <Target className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-extrabold text-sky-400 tracking-tight">
+                    {loading ? 'Carregando...' : formatCurrency(totalReservadoMetas)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-sky-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Mês atual</span>
+                    </span>
+                    <span className="text-gray-500">alocado em metas</span>
                   </div>
                 </div>
               </div>
