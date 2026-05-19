@@ -230,7 +230,6 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
             const loadingTask = pdfjsLib.getDocument({ 
               data: uint8Array,
               useWorkerFetch: false,
-              isEvalSupported: false,
               useSystemFonts: true,
             });
             
