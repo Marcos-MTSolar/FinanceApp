@@ -485,8 +485,8 @@ ${textoExtraido.substring(0, 8000)}
       }, {} as Record<string, number>);
 
     const categoriaOrdenada = Object.entries(gastosPorCategoria)
-      .sort(([,a], [,b]) => b - a)
-      .map(([cat, val]) => `${cat}: R$${val.toFixed(2)}`)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
+      .map(([cat, val]) => `${cat}: R$${(val as number).toFixed(2)}`)
       .join(', ');
 
     const systemPrompt = `
