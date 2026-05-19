@@ -195,8 +195,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       const pdfResponse = await fetch(url);
       const arrayBuffer = await pdfResponse.arrayBuffer();
       
-      // @ts-ignore
-      const pdfParse = pdfParseModule.default || pdfParseModule;
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js');
       const data = await pdfParse(Buffer.from(arrayBuffer));
       
       res.json({ text: data.text });
@@ -219,10 +218,21 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         const ext = req.file.originalname.split('.').pop()?.toLowerCase();
         if (ext === 'pdf') {
           try {
-            const pdfParseModule = await import('pdf-parse');
-            const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+            const pdfParse = require('pdf-parse/lib/pdf-parse.js');
             const data = await pdfParse(Buffer.from(fileBuffer));
-            textoBruto = data.text;
+            const textoExtraido = data.text;
+
+            console.log('=== TEXTO EXTRAÍDO DO PDF ===');
+            console.log(textoExtraido.substring(0, 500));
+            console.log('=== FIM ===');
+
+            if (!textoExtraido || textoExtraido.trim().length < 50) {
+              return res.status(400).json({ 
+                error: 'Não foi possível extrair texto do PDF. Arquivo pode estar corrompido ou ser imagem.' 
+              });
+            }
+
+            textoBruto = textoExtraido;
           } catch (pdfErr: any) {
             console.warn('[pdf-parse] Falha ao parsear PDF, usando fallback de texto bruto:', pdfErr.message);
             textoBruto = fileBuffer.toString('latin1').replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim();
@@ -251,52 +261,58 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
       const prompt = `
 Você é um classificador de extratos bancários brasileiros.
-Analise o texto abaixo de um extrato bancário Santander Empresas.
+Analise o texto abaixo e extraia TODAS as transações financeiras.
 
-O formato de cada linha é:
-DATA | DESCRIÇÃO | (DOCUMENTO opcional) | VALOR | SALDO
+FORMATO 1 - Santander Empresas:
+Colunas: Data | Histórico | Documento | Valor (R$) | Saldo (R$)
+Valor negativo = despesa, valor positivo = receita
 
-REGRAS:
-1. Valor negativo (com sinal - ou entre parênteses) = DESPESA
-2. Valor positivo = RECEITA
-3. IGNORE completamente linhas com: "Aplicacao Contamax", "Resgate Contamax Automatico", "Cancelamento Resgate Contamax", "Iof Adicional", "Iof Imposto"
-4. Data no formato DD/MM/AAAA — converta para AAAA-MM-DD no JSON
-5. Use o valor absoluto (sem o sinal negativo) no campo "valor"
+FORMATO 2 - Santander Internet Banking (Pessoa Física):
+Colunas: Data | Descrição | Docto | Situação | Crédito (R$) | Débito (R$) | Saldo (R$)
+Coluna Crédito preenchida = receita
+Coluna Débito preenchida = despesa
 
-CATEGORIAS para despesa:
-- Transporte: posto, combustível, Uber, 99 Food, parking, ECO POSTO, POSTO PHENIX, POSTO VITORIA
-- Alimentação: restaurante, hortifruti, mercadinho, pão de açúcar, rei do pirao, bolacha
-- Saúde: farmácia, médico, Fleury, hospital
-- Energia: COMPANHIA ENE DE PE, CELPE, NEOENERGIA, COPEL
+REGRAS GERAIS:
+1. IGNORE: IOF, Remuneracao Aplicacao Automatica, Aplicacao Contamax, 
+   Resgate Contamax, Cancelamento Resgate, IOF Adicional
+2. Data DD/MM/AAAA → converter para AAAA-MM-DD
+3. Use valor absoluto (sem sinal negativo) no campo "valor"
+4. Vírgula como decimal: 1.860,32 → 1860.32
+
+CATEGORIAS despesa:
+- Transporte: Uber, 99 Food, posto, combustível, parking, ECO POSTO, POSTO PHENIX
+- Alimentação: mercado, hortifruti, restaurante, pão de açúcar, rei do pirao, mercadinho
+- Moradia: condomínio, crédito imobiliário, OPERACOES CREDITO IMOBILIARIO
+- Saúde: farmácia, médico, Fleury, seguro saúde, TOKIO MARINE
+- Energia: COMPANHIA ENE DE PE, CELPE, NEOENERGIA, Companhia Energetica
+- Telecomunicações: VIVO, claro, tim, oi, BRASIL REDES, USE TELECOMUNICACOES
 - Impostos: IPVA, SEFAZ, IOF, tributos
-- Serviços: contabilidade, RESISTENCIA CONTABIL, CONSELHO REGIONAL, USE TELECOMUNICACOES
-- Fornecedor: FACIL SUPRIMENTOS, SOLFACIL, SOLAR LIFE, OPTATEC, SOUZA E LUCENA
-- Financiamento: AYMORE, debito emprestimo, prest emprestimos, CEF MATRIZ, ITAU UNIBANCO
-- Pessoal: qualquer Pix Enviado para nome de pessoa física (ex: WELLEN, CRISTINO, MARCOS, PAULO, etc.)
-- Capitalização: Debito Aut. Titulo Capitalizacao
-- Outros: qualquer outro não classificado acima
+- Serviços: contabilidade, RESISTENCIA CONTABIL, CONSELHO REGIONAL, ZOOP, PAGALEVE
+- Fornecedores: FACIL SUPRIMENTOS, SOLFACIL, SOLAR LIFE, OPTATEC
+- Financiamento: AYMORE, debito emprestimo, CEF MATRIZ, ITAU UNIBANCO
+- Pessoal: Pix Enviado para nome de pessoa física
+- Outros: qualquer outro não classificado
 
-CATEGORIAS para receita:
-- Salário: Pix Recebido, Ted Recebida, Cr Cob Bloq Comp Conf Recebimento
-- Outros: qualquer outro recebimento
+CATEGORIAS receita:
+- Receita Operacional: PIX RECEBIDO, TED RECEBIDA, Cr Cob Bloq
+- Outros: qualquer outro crédito
 
-Retorne SOMENTE o JSON abaixo, sem texto adicional, sem markdown, sem explicações:
+Retorne SOMENTE JSON válido, sem markdown, sem explicação:
 
 {
   "transacoes": [
     {
-      "descricao": "descrição limpa sem números de documento",
-      "valor": 150.00,
+      "descricao": "descrição limpa",
+      "valor": 1860.32,
       "tipo": "despesa",
-      "categoria": "Transporte",
-      "data": "2026-04-01",
-      "recorrente": false
+      "categoria": "Moradia",
+      "data": "2026-05-04"
     }
   ]
 }
 
 TEXTO DO EXTRATO:
-${textoExtraido}
+${textoExtraido.substring(0, 8000)}
 `;
 
       try {
