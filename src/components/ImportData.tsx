@@ -95,17 +95,20 @@ export function ImportData() {
       
       if (!classificarRes.ok) throw new Error(classificarData.error || `Erro HTTP ${classificarRes.status}`);
       
-      if (classificarData.transacoes?.length > 0) {
-        setTransactions(
-          classificarData.transacoes.map((t: any, i: number) => ({
-            id: `temp_${i}`,
-            ...t
-          }))
+      if (!classificarData.transacoes || classificarData.transacoes.length === 0) {
+        throw new Error(
+          'Nenhuma transação identificada. Verifique se o PDF é um extrato ' +
+          'bancário com texto selecionável (não escaneado).'
         );
-        setStep('preview');
-      } else {
-        throw new Error('Nenhuma transação financeira detectada no arquivo.');
       }
+
+      setTransactions(
+        classificarData.transacoes.map((t: any, i: number) => ({
+          id: `temp_${i}`,
+          ...t
+        }))
+      );
+      setStep('preview');
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Ocorreu um erro no processamento do arquivo.');

@@ -237,9 +237,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
             textoBruto = textoExtraido;
           } catch (pdfErr: any) {
-            // Fallback seguro: extrai texto bruto do buffer sem lib pesada
-            console.warn('[pdf-parse] Falha ao parsear PDF, usando fallback de texto bruto:', pdfErr.message);
-            textoBruto = fileBuffer.toString('latin1').replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim();
+            console.error('[pdf-parse] Falha ao parsear PDF:', pdfErr.message);
+            return res.status(400).json({ 
+              error: 'Erro ao ler o PDF. Tente converter para CSV ou envie outro arquivo.' 
+            });
           }
         } else if (['csv', 'ofx'].includes(ext || '')) {
           textoBruto = fileBuffer.toString('utf-8');
@@ -257,6 +258,24 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         console.log(`[Importação] textoBruto extraído. Tamanho original: ${textoBruto.length} caracteres.`);
         textoExtraido = textoBruto.substring(0, 8000);
         console.log(`[Importação] textoExtraido que será enviado à IA: ${textoExtraido.length} caracteres.`);
+
+        const temPadraoExtrato = 
+          textoExtraido.includes('Pix') || 
+          textoExtraido.includes('PIX') ||
+          textoExtraido.includes('Débito') ||
+          textoExtraido.includes('Crédito') ||
+          textoExtraido.includes('TED') ||
+          textoExtraido.includes('Data') ||
+          textoExtraido.includes('/202');
+
+        console.log('[Validação] Tem padrão de extrato:', temPadraoExtrato);
+        console.log('[Validação] Amostra do texto:', textoExtraido.substring(0, 300));
+
+        if (!temPadraoExtrato) {
+          return res.status(400).json({ 
+            error: 'O arquivo não parece ser um extrato bancário válido.' 
+          });
+        }
       } else if (transacoes) {
         textoExtraido = JSON.stringify(transacoes.slice(0, 80));
       } else {
@@ -265,7 +284,14 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
       const prompt = `
 Você é um classificador de extratos bancários brasileiros.
-Analise o texto abaixo e extraia TODAS as transações financeiras.
+IMPORTANTE: O texto abaixo pode ter espaçamentos irregulares ou 
+quebras de linha no meio de palavras — isso é normal em PDFs.
+Interprete o conteúdo pelo contexto, não pela formatação.
+
+Extraia ABSOLUTAMENTE TODAS as linhas que representem 
+movimentações financeiras (entradas e saídas de dinheiro).
+Se encontrar qualquer valor monetário com data, classifique.
+Não deixe nenhuma transação de fora.
 
 FORMATO 1 - Santander Empresas:
 Colunas: Data | Histórico | Documento | Valor (R$) | Saldo (R$)
@@ -318,6 +344,10 @@ Retorne SOMENTE JSON válido, sem markdown, sem explicação:
 TEXTO DO EXTRATO:
 ${textoExtraido.substring(0, 8000)}
 `;
+
+      console.log('=== PROMPT ENVIADO AO GROQ (primeiros 1000 chars) ===');
+      console.log(prompt.substring(0, 1000));
+      console.log('=== FIM DO PROMPT ===');
 
       try {
         const chatCompletion = await groq.chat.completions.create({
