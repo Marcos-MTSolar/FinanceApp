@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { HeaderXPBar } from '../components/HeaderXPBar';
@@ -155,9 +156,13 @@ export function Dashboard() {
     const generateAlerts = async () => {
       if (!user?.uid) return;
       try {
+        const token = await user.getIdToken();
         const res = await fetch('/api/cron/alertas', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: user.uid,
             transacoes: transactions.slice(0, 30),
@@ -217,7 +222,7 @@ export function Dashboard() {
       setModo(novoModo);
     } catch (e) {
       console.error('Erro ao atualizar modo no Firestore:', e);
-      alert('Erro ao alterar o modo. Tente novamente.');
+      toast.error('Erro ao alterar o modo. Tente novamente.');
     } finally {
       setChangingModo(false);
     }
@@ -731,7 +736,7 @@ export function Dashboard() {
             </div>
             <div className="space-y-6">
               <ScoreGauge score={scoreData.score} label={scoreData.label} />
-              <MetasAtivasResumo metas={metas} />
+              <MetasAtivasResumo metas={metas.filter(m => m.categoria?.toLowerCase() === modo)} />
             </div>
           </div>
 

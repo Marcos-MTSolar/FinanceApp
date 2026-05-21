@@ -1,6 +1,9 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { ShieldAlert, Zap, Check } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebaseConfig';
+import toast from 'react-hot-toast';
 
 export type PlanType = 'Free' | 'Pro' | 'Empresarial';
 
@@ -27,7 +30,17 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   }, [profile]);
 
   const checkAccess = (requiredPlan: PlanType, feature?: string): boolean => {
-    return true; // Libera todas as features por enquanto
+    const planHierarchy: Record<PlanType, number> = {
+      'Free': 0,
+      'Pro': 1,
+      'Empresarial': 2
+    };
+    const currentPlan = plan || 'Free';
+    if (planHierarchy[currentPlan] < planHierarchy[requiredPlan]) {
+      openUpgradeModal(feature);
+      return false;
+    }
+    return true;
   };
 
   const openUpgradeModal = (feature?: string) => {
@@ -57,6 +70,22 @@ export function usePlan() {
 }
 
 function UpgradeModal({ onClose, feature, plan }: { onClose: () => void, feature: string, plan: PlanType }) {
+  const { user } = useAuth();
+
+  const handleUpgrade = async (newPlan: PlanType) => {
+    if (!user?.uid) {
+      toast.error('Usuário não autenticado.');
+      return;
+    }
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { plano: newPlan });
+      toast.success(`Parabéns! Upgrade para o plano ${newPlan} concluído! 🎉`);
+      onClose();
+    } catch (err) {
+      console.error('Erro ao realizar upgrade de plano:', err);
+      toast.error('Não foi possível processar o upgrade de plano.');
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row relative">
@@ -93,7 +122,10 @@ function UpgradeModal({ onClose, feature, plan }: { onClose: () => void, feature
               <li className="flex"><Check className="w-5 h-5 text-indigo-500 mr-2 shrink-0" /> Simulador de Cenários Avançado</li>
               <li className="flex"><Check className="w-5 h-5 text-indigo-500 mr-2 shrink-0" /> Relatórios em PDF Exportáveis</li>
             </ul>
-            <button className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition flex justify-center items-center">
+            <button 
+              onClick={() => handleUpgrade('Pro')}
+              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition flex justify-center items-center"
+            >
               Assinar Pro <Zap className="w-4 h-4 ml-2" />
             </button>
           </div>
@@ -111,7 +143,10 @@ function UpgradeModal({ onClose, feature, plan }: { onClose: () => void, feature
               <li className="flex"><Check className="w-5 h-5 text-gray-400 mr-2 shrink-0" /> Acesso para Contador</li>
               <li className="flex"><Check className="w-5 h-5 text-gray-400 mr-2 shrink-0" /> Integração de Notas Fiscais NFe</li>
             </ul>
-            <button className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+            <button 
+              onClick={() => handleUpgrade('Empresarial')}
+              className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+            >
               Assinar Empresarial
             </button>
           </div>

@@ -73,6 +73,7 @@ export function Simulador() {
   };
 
   const simular = async () => {
+    if (!checkAccess('Pro', 'Simulador de Cenários')) return;
     setLoading(true);
     let resCalculo;
     let variables;

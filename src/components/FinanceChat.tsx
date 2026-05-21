@@ -5,6 +5,7 @@ import { db } from '../lib/firebaseConfig';
 import { getAuth } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { usePlan } from '../hooks/usePlan';
+import toast from 'react-hot-toast';
 
 export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
   const { user, profile } = useAuth();
@@ -58,11 +59,16 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
     setIsTyping(true);
 
     // Salva mensagem do usuário no Firestore
-    await addDoc(collection(db, `chats/${user.uid}/messages`), {
-      role: 'user',
-      content: userMessage,
-      timestamp: serverTimestamp()
-    });
+    try {
+      await addDoc(collection(db, `chats/${user.uid}/messages`), {
+        role: 'user',
+        content: userMessage,
+        timestamp: serverTimestamp()
+      });
+    } catch (e) {
+      console.error('Erro ao salvar mensagem do usuário no Firestore:', e);
+      toast.error('Erro ao salvar mensagem no chat.');
+    }
 
     try {
       const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
@@ -131,11 +137,16 @@ export function FinanceChat({ fullPage = false }: { fullPage?: boolean }) {
 
       // Só persiste no Firestore se a resposta não foi um erro
       if (aiFullResponse && !hasError) {
-        await addDoc(collection(db, `chats/${user.uid}/messages`), {
-          role: 'assistant',
-          content: aiFullResponse,
-          timestamp: serverTimestamp()
-        });
+        try {
+          await addDoc(collection(db, `chats/${user.uid}/messages`), {
+            role: 'assistant',
+            content: aiFullResponse,
+            timestamp: serverTimestamp()
+          });
+        } catch (e) {
+          console.error('Erro ao salvar resposta da IA no Firestore:', e);
+          toast.error('Erro ao salvar resposta no histórico do chat.');
+        }
       } else if (!aiFullResponse) {
         // Remove a bolha temporária vazia se nada chegou
         setMessages(prev => prev.filter(m => m.id !== tempId));

@@ -22,7 +22,10 @@ declare global {
   }
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 console.log('GROQ KEY:', process.env.GROQ_API_KEY ? 'carregada' : 'AUSENTE');
 
@@ -104,7 +107,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   });
 
   // API Route for Diagnostic Score & Recommendations
-  app.post('/api/diagnostico', async (req, res) => {
+  app.post('/api/diagnostico', requireAuth, aiLimiter, async (req, res) => {
     try {
       const data = req.body;
       const { modo } = data;
@@ -180,7 +183,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   });
 
   // API Route to parse PDF from a URL (e.g. Firebase Storage public URL)
-  app.post('/api/parse-pdf', async (req, res) => {
+  app.post('/api/parse-pdf', requireAuth, async (req, res) => {
     try {
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: 'URL required' });
@@ -634,7 +637,7 @@ Forneça uma explicação curta (máximo 3 parágrafos) sobre esse cenário, com
   });
 
   // Simulação de Cloud Function (Pode ser chamada via Cron Job)
-  app.post('/api/cron/alertas', async (req, res) => {
+  app.post('/api/cron/alertas', requireAuth, aiLimiter, async (req, res) => {
     try {
       const { transacoes, userId, metas } = req.body;
       

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, signOut as firebaseSignOut, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
+import { verificarInatividade, verificarSaldoMensal } from '../lib/gamification';
 
 export type AppMode = 'pessoal' | 'empresarial';
 export type AppPlan = 'Free' | 'Pro' | 'Empresarial';
@@ -14,6 +15,7 @@ export interface UserProfile {
   xp: number;
   nivel: number;
   criadoEm: string;
+  ultimoAcesso: string;
 }
 
 interface AuthContextType {
@@ -50,8 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               xp: 0,
               nivel: 1,
               criadoEm: new Date().toISOString(),
+              ultimoAcesso: new Date().toISOString(),
             };
             await setDoc(docRef, newProfile);
+          } else {
+            // Usuário existente: atualiza acesso e dispara verificações de gamificação
+            await setDoc(docRef, { ultimoAcesso: new Date().toISOString() }, { merge: true });
+            // Executa em background — não bloqueia o carregamento do perfil
+            Promise.all([
+              verificarInatividade(firebaseUser.uid),
+              verificarSaldoMensal(firebaseUser.uid),
+            ]).catch(err =>
+              console.error('[useAuth] Erro nas verificações de gamificação:', err)
+            );
           }
         } catch (err) {
           console.error('Erro ao buscar/criar perfil inicial do usuário:', err);

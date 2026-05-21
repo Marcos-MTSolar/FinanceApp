@@ -6,7 +6,7 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Tesseract from 'tesseract.js';
-import { addXp } from '../lib/gamification';
+import { applyXpEvent } from '../lib/gamification';
 import { usePlan } from '../hooks/usePlan';
 import toast from 'react-hot-toast';
 
@@ -157,8 +157,8 @@ export function ImportData() {
       }
       await batch.commit();
 
-      // Gamification Reward: Importar extrato (+20 XP)
-      await addXp(user.uid, 20);
+      // Gamification Reward: Importar extrato (+20 XP — catálogo: IMPORTAR_EXTRATO)
+      await applyXpEvent(user.uid, 'IMPORTAR_EXTRATO');
       toast.success('+20 XP! Extrato importado com sucesso 🎉');
 
       // Salva o contador ANTES de limpar as transações

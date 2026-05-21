@@ -214,17 +214,23 @@ export const verificarExcessoDespesasDia = async (userId: string): Promise<void>
     const userData = (await getDoc(userRef)).data() || {};
     if (userData.lastPenalidadeDia === dataHoje) return; // já penalizou hoje
 
+    // Usa range no criadoEm (Timestamp) pois o campo data é ISO com hora, não plain YYYY-MM-DD
+    const inicioDia = Timestamp.fromDate(new Date(`${dataHoje}T00:00:00.000`));
+    const fimDia    = Timestamp.fromDate(new Date(`${dataHoje}T23:59:59.999`));
+
     const snap = await getDocs(
       query(
         collection(db, `transacoes/${userId}/items`),
         where('tipo', '==', 'despesa'),
-        where('data', '==', dataHoje)
+        where('criadoEm', '>=', inicioDia),
+        where('criadoEm', '<=', fimDia)
       )
     );
 
     if (snap.size >= 3) {
       await addXp(userId, XP_EVENTS.EXCESSO_DESPESAS_DIA.xp);
       await setDoc(userRef, { lastPenalidadeDia: dataHoje }, { merge: true });
+      console.log('[gamification] Penalidade EXCESSO_DESPESAS_DIA aplicada:', dataHoje);
     }
   } catch (err) {
     console.error('[gamification] Erro ao verificar excesso de despesas no dia:', err);
@@ -251,16 +257,17 @@ export const verificarInatividade = async (userId: string): Promise<void> => {
       : 0;
 
     if (diasSemAcesso >= 7) {
-      // Verifica se há metas ativas
+      // Verifica se há metas ativas (campo correto é status === 'ativa')
       const metasSnap = await getDocs(
         query(
           collection(db, `metas/${userId}/items`),
-          where('concluida', '==', false)
+          where('status', '==', 'ativa')
         )
       );
 
       if (metasSnap.size > 0) {
         await addXp(userId, XP_EVENTS.INATIVIDADE_COM_METAS.xp);
+        console.log('[gamification] Penalidade INATIVIDADE_COM_METAS aplicada.');
       }
     }
 

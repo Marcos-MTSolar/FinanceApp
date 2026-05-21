@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
-import { addXp } from '../lib/gamification';
+import { addXp, applyXpEvent } from '../lib/gamification';
 import toast from 'react-hot-toast';
 
 export function OnboardingWizard() {
@@ -56,9 +56,13 @@ export function OnboardingWizard() {
     };
 
     try {
+      const token = await user?.getIdToken();
       const res = await fetch('/api/diagnostico', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -74,9 +78,17 @@ export function OnboardingWizard() {
         atualizadoEm: new Date().toISOString(),
       });
 
-      // Gamification Reward: Diagnostic (+100 XP)
-      await addXp(user.uid, 100);
-      toast.success('+100 XP! Diagnóstico inicial concluído com sucesso 🎉');
+      // Persiste a renda no perfil do usuário para que verificarExcessoLuxo possa lê-la
+      const rendaParaPerfil = modo === 'pessoal'
+        ? Number(rendaVenda) || 0
+        : Number(faturamentoMensal) || 0;
+      if (rendaParaPerfil > 0) {
+        await setDoc(doc(db, 'users', user.uid), { renda: rendaParaPerfil }, { merge: true });
+      }
+
+      // Gamification Reward: Diagnóstico (+30 XP — catalogo oficial DIAGNOSTICO_INICIAL)
+      await applyXpEvent(user.uid, 'DIAGNOSTICO_INICIAL');
+      toast.success('+30 XP! Diagnóstico inicial concluído com sucesso 🎉');
 
       if (profile?.modo !== modo) {
         await switchMode(modo);
@@ -86,7 +98,7 @@ export function OnboardingWizard() {
       setStep(3);
     } catch (err) {
       console.error(err);
-      alert('Erro ao calcular diagnóstico');
+      toast.error('Erro ao calcular diagnóstico');
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebaseConfig';
 import { getAuth } from 'firebase/auth';
 import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -191,6 +192,7 @@ export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { ch
 }
 
 export function MetasAtivasResumo({ metas }: { metas: any[] }) {
+  const activeMetas = metas.filter((m: any) => m.status === 'ativa');
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
       <div className="flex items-center justify-between mb-6">
@@ -201,12 +203,12 @@ export function MetasAtivasResumo({ metas }: { metas: any[] }) {
           <span>Metas Ativas</span>
         </h3>
         <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400">
-          {metas.length} em andamento
+          {activeMetas.length} em andamento
         </span>
       </div>
       <div className="space-y-5">
-        {metas.slice(0, 3).map((m: any) => {
-          const valorAtual = Number(m.progressoAtual || m.valorAtual || 0);
+        {activeMetas.slice(0, 3).map((m: any) => {
+          const valorAtual = m.progressoAtual !== undefined && m.progressoAtual !== null ? Number(m.progressoAtual) : Number(m.valorAtual || 0);
           const valorAlvo = Number(m.valorAlvo || 1);
           const perc = Math.min((valorAtual / valorAlvo) * 100, 100);
           return (
@@ -219,13 +221,13 @@ export function MetasAtivasResumo({ metas }: { metas: any[] }) {
                 <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${perc}%` }}></div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex justify-between font-medium">
-                <span>Acumulado: R$ {valorAtual.toLocaleString('pt-BR')}</span>
-                <span>Meta: R$ {valorAlvo.toLocaleString('pt-BR')}</span>
+                <span>Acumulado: R$ {valorAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>Meta: R$ {valorAlvo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           );
         })}
-        {metas.length === 0 && (
+        {activeMetas.length === 0 && (
           <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-xs font-medium bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
             Nenhuma meta ativa cadastrada no momento.
           </div>
@@ -281,9 +283,13 @@ export function Dashboard() {
      const generateAlerts = async () => {
        if (!user?.uid) return;
        try {
+         const token = await user.getIdToken();
          const res = await fetch('/api/cron/alertas', {
            method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
+           headers: { 
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${token}`
+           },
            body: JSON.stringify({
              userId: user.uid,
              transacoes: transacoes.slice(0, 30),
@@ -340,7 +346,7 @@ export function Dashboard() {
       a.remove();
     } catch(e) {
       console.error(e);
-      alert('Erro buscando PDF');
+      toast.error('Erro ao baixar PDF. Tente novamente.');
     }
   };
 
@@ -482,7 +488,7 @@ export function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            <MetasAtivasResumo metas={metas} />
+            <MetasAtivasResumo metas={metas.filter(m => m.categoria?.toLowerCase() === profile.modo)} />
 
             {isPessoal && (
               <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">

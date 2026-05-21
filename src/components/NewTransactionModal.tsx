@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
-import { addXp } from '../lib/gamification';
+import { applyXpEvent, verificarExcessoDespesasDia } from '../lib/gamification';
 import toast from 'react-hot-toast';
 
 interface NewTransactionModalProps {
@@ -76,8 +76,15 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         criadoEm: new Date().toISOString()
       });
 
-      await addXp(userId, 10); // +10 XP por transação
-      toast.success('+10 XP! Transação registrada com sucesso 💰');
+      // XP: +10 apenas para receitas (catálogo: ADICIONAR_RECEITA)
+      // Para despesas: verificar penalidade de excesso no dia
+      if (tipo === 'receita') {
+        await applyXpEvent(userId, 'ADICIONAR_RECEITA');
+        toast.success('+10 XP! Receita registrada com sucesso 💰');
+      } else {
+        await verificarExcessoDespesasDia(userId);
+        toast.success('Despesa registrada com sucesso!');
+      }
 
       // Reset dos campos e fecha o modal
       handleClose();

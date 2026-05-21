@@ -4,7 +4,7 @@ import { db } from '../lib/firebaseConfig';
 import { getAuth } from 'firebase/auth';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, deleteDoc, writeBatch, increment } from 'firebase/firestore';
 import { Target, Trophy, Plus, CheckCircle, XCircle, Sparkles, Loader2, Play, Trash2, PiggyBank } from 'lucide-react';
-import { addXp, getLevelInfo } from '../lib/gamification';
+import { addXp, applyXpEvent, getLevelInfo } from '../lib/gamification';
 import { criarNotificacao } from './NotificacoesDropdown';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
@@ -79,11 +79,14 @@ export function Metas() {
         userId: uid,
         criadoEm: serverTimestamp()
       });
+      // +15 XP por cadastrar nova meta (catálogo: CADASTRAR_META)
+      await applyXpEvent(uid, 'CADASTRAR_META');
+      toast.success('+15 XP! Nova meta criada 🎯');
       setIsModalOpen(false);
       setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
     } catch (error) {
       console.error('Erro ao cadastrar meta no Firestore:', error);
-      alert('Erro ao criar meta. Verifique permissões ou conexão com o Firestore.');
+      toast.error('Erro ao criar meta. Verifique permissões ou conexão com o Firestore.');
     }
   };
 
@@ -106,8 +109,9 @@ export function Metas() {
       const xpAntes = snapAntes.data()?.xp || 0;
       const nivelAntes = getLevelInfo(xpAntes).currentLevel.level;
 
-      await addXp(uid, 500);
-      toast.success('🏆 +500 XP! Meta concluída com sucesso!');
+      // +50 XP por concluir meta (catálogo: META_CONCLUIDA)
+      await applyXpEvent(uid, 'META_CONCLUIDA');
+      toast.success('🏆 +50 XP! Meta concluída com sucesso!');
 
       // Captura novo nível após adicionar XP
       const snapDepois = await getDoc(doc(db, 'users', uid));
@@ -126,6 +130,7 @@ export function Metas() {
       }, 5000);
     } catch (error) {
       console.error('Erro ao concluir meta no Firestore:', error);
+      toast.error('Erro ao concluir meta. Tente novamente.');
     }
   };
 
@@ -136,9 +141,10 @@ export function Metas() {
     if (!window.confirm('Deseja realmente excluir esta meta permanentemente?')) return;
     try {
       await deleteDoc(doc(db, `metas/${uid}/items`, id));
+      toast.success('Meta excluída com sucesso!');
     } catch (error) {
       console.error('Erro ao excluir meta no Firestore:', error);
-      alert('Erro ao excluir. Verifique permissões.');
+      toast.error('Erro ao excluir. Verifique permissões.');
     }
   };
 
@@ -319,17 +325,20 @@ export function Metas() {
 
                            // 2. Cria transação de despesa vinculada
                            const transacaoRef = doc(collection(db, `transacoes/${user.uid}/items`));
+                           const modoAporte = m.categoria?.toLowerCase() === 'empresarial' ? 'empresarial' : 'pessoal';
+                           const now = new Date();
+                           const formattedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0).toISOString();
                            batch.set(transacaoRef, {
                              descricao: `Reserva para meta: ${m.titulo}`,
                              valor: Number(valorAporte),
                              tipo: 'despesa',
                              categoria: 'Meta',
-                             data: new Date().toISOString().split('T')[0],
+                             data: formattedDate,
+                             modo: modoAporte,
                              origem: 'meta',
                              metaId: m.id,
                              criadoEm: serverTimestamp()
                            });
-
                            await batch.commit();
                            toast.success(`R$ ${valorAporte} reservado para "${m.titulo}"!`);
 
@@ -351,7 +360,7 @@ export function Metas() {
                     onClick={() => handleComplete(m.id)}
                     className="flex-1 py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-xl text-sm font-medium transition flex justify-center items-center"
                   >
-                    <CheckCircle className="w-4 h-4 mr-1.5" /> Concluir (+500 XP)
+                    <CheckCircle className="w-4 h-4 mr-1.5" /> Concluir (+50 XP)
                   </button>
                   <button 
                     onClick={() => handleDelete(m.id)}

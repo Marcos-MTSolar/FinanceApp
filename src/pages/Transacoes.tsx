@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc, deleteDoc, where } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { NewTransactionModal } from '../components/NewTransactionModal';
@@ -123,9 +124,10 @@ export function Transacoes() {
             await deleteDoc(doc(db, `rendaExtra/${user.uid}/items`, t.rendaExtraId));
           }
         }
+        toast.success('Transação excluída com sucesso!');
       } catch (err) {
         console.error('Erro ao excluir transação:', err);
-        alert('Erro ao excluir transação. Tente novamente.');
+        toast.error('Erro ao excluir transação. Tente novamente.');
       }
     }
   };

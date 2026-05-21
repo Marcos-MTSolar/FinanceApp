@@ -7,8 +7,10 @@ import {
   signInWithPopup,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '../lib/firebaseConfig';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebaseConfig';
 import { Loader2, Mail, Lock, User, Eye, EyeOff, TrendingUp, Sparkles } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const ERROS: Record<string, string> = {
   'auth/user-not-found':         'Nenhuma conta encontrada com esse e-mail.',
@@ -43,7 +45,14 @@ export function Login() {
     setLoading(true);
     try {
       if (modo === 'login') {
-        await signInWithEmailAndPassword(auth, email.trim(), senha);
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), senha);
+        try {
+          await setDoc(doc(db, 'users', cred.user.uid), { ultimoAcesso: new Date().toISOString() }, { merge: true });
+        } catch (dbErr) {
+          console.warn('Erro ao atualizar ultimoAcesso:', dbErr);
+        }
+        toast.success('Login realizado com sucesso!');
+        navigate('/dashboard');
       } else {
         console.log('Tentando cadastro com:', { 
           email: email.trim(), 
@@ -51,35 +60,40 @@ export function Login() {
           modo 
         });
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
-        console.log('Cadastro bem sucedido:', cred.user.uid);
+        console.log('Cadastro bem sucedido no Auth:', cred.user.uid);
+        
+        const userProfile = {
+          nome: nome.trim() || cred.user.displayName || cred.user.email?.split('@')[0] || 'Usuário',
+          email: cred.user.email || email.trim(),
+          modo: 'pessoal',
+          plano: 'Free',
+          xp: 0,
+          nivel: 1,
+          criadoEm: new Date().toISOString(),
+          ultimoAcesso: new Date().toISOString(),
+        };
+
+        console.log('Gravando perfil no Firestore...');
+        await setDoc(doc(db, 'users', cred.user.uid), userProfile);
+        console.log('Perfil gravado com sucesso no Firestore');
+
         if (nome.trim()) {
           try {
             await updateProfile(cred.user, { displayName: nome.trim() });
           } catch (profileError) {
-            console.warn('Erro ao salvar nome, continuando...', profileError);
+            console.warn('Erro ao salvar nome no profile do Auth, continuando...', profileError);
           }
         }
+        
+        toast.success('Conta criada com sucesso!');
+        navigate('/onboarding');
       }
-      navigate('/dashboard');
     } catch (err: any) {
-      console.error('Erro completo:', {
-        code: err.code,
-        message: err.message,
-        email: email.trim()
-      });
-
-      const mensagens: Record<string, string> = {
-        'auth/user-not-found': 'Usuário não encontrado.',
-        'auth/wrong-password': 'Senha incorreta.',
-        'auth/invalid-credential': 'Email ou senha inválidos.',
-        'auth/email-already-in-use': 'Este email já está cadastrado. Tente fazer login.',
-        'auth/weak-password': 'Senha muito fraca. Use pelo menos 6 caracteres.',
-        'auth/invalid-email': 'Formato de email inválido.',
-        'auth/network-request-failed': 'Sem conexão com a internet.',
-        'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos.',
-        'auth/operation-not-allowed': 'Cadastro desativado. Contate o suporte.',
-      };
-      setErro(mensagens[err.code] || err.message);
+      console.error('Erro completo no login/registro:', err);
+      const code = err.code || 'unknown';
+      const msg = getMensagemErro(code) || err.message;
+      setErro(msg);
+      toast.error(`Falha no processo: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -90,11 +104,35 @@ export function Login() {
     setLoadingGoogle(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      navigate('/dashboard');
+      const cred = await signInWithPopup(auth, provider);
+      
+      const docRef = doc(db, 'users', cred.user.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        const userProfile = {
+          nome: cred.user.displayName || cred.user.email?.split('@')[0] || 'Usuário',
+          email: cred.user.email || '',
+          modo: 'pessoal',
+          plano: 'Free',
+          xp: 0,
+          nivel: 1,
+          criadoEm: new Date().toISOString(),
+          ultimoAcesso: new Date().toISOString(),
+        };
+        await setDoc(docRef, userProfile);
+        toast.success('Conta criada com sucesso via Google!');
+        navigate('/onboarding');
+      } else {
+        await setDoc(docRef, { ultimoAcesso: new Date().toISOString() }, { merge: true });
+        toast.success('Login realizado com sucesso!');
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        setErro(getMensagemErro(err.code));
+        const msg = getMensagemErro(err.code) || err.message;
+        setErro(msg);
+        toast.error(`Erro no login Google: ${msg}`);
       }
     } finally {
       setLoadingGoogle(false);
