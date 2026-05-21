@@ -21,17 +21,14 @@ const config: CapacitorConfig = {
   appName: 'FinanceAI',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    cleartext: false,
-    // url: 'https://SEU-PROJETO.vercel.app', // ← USE SOMENTE em dev/live-reload. Remova para produção.
-    allowNavigation: ['api.antigravity.dev', '*.antigravity.dev'],
+    url: 'https://finance-app.vercel.app',
+    cleartext: false
   },
   android: {
-    backgroundColor: '#030712', // Corresponde ao bg-gray-950 do Tailwind
-    loggingBehavior: 'none',    // Desativa logs verbose em produção
+    backgroundColor: '#030712',
     overScrollMode: 'never',
-    allowMixedContent: true,
-  },
+    allowMixedContent: false
+  }
 };
 
 export default config;
