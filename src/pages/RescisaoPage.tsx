@@ -5,12 +5,12 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
-  Calculator, Download, CheckCircle2, XCircle as XIcon
-, Network, CheckSquare } from 'lucide-react';
+  Calculator, Download, CheckCircle2, XCircle as XIcon,
+  Network, CheckSquare, PiggyBank, Percent, Tag, Activity, Scale
+} from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -31,7 +31,6 @@ interface Verba { nome: string; valor: number; devida: boolean; tributavel?: boo
 interface Resultado { verbas: Verba[]; inss: number; totalBruto: number; totalLiquido: number; }
 
 function calcular(salario: number, admissao: Date, demissao: Date, tipo: TipoRescisao): Resultado {
-  const diasNoMes = new Date(demissao.getFullYear(), demissao.getMonth() + 1, 0).getDate();
   const diasTrabalhados = demissao.getDate();
   const mesesTotais = diffMonths(admissao, demissao);
   const mesesNoAno = diffMonths(new Date(demissao.getFullYear(), 0, 1), demissao) || 1;
@@ -50,7 +49,7 @@ function calcular(salario: number, admissao: Date, demissao: Date, tipo: TipoRes
   const feriasProp = devFeriasProp ? (salario / 12) * mesesPeriodo : 0;
   const umTerco = devUmTercoProp ? (feriasVencidas + feriasProp) * 0.3333 : 0;
   const trezeAvos = dev13 ? (salario / 12) * mesesNoAno : 0;
-  const fgtsDepositar = 0; // Considera já depositado mensalmente
+  const fgtsDepositar = 0;
   const fgtsAcumulado = salario * 0.08 * mesesTotais;
   const multaFGTS = devMulta ? fgtsAcumulado * 0.40 : 0;
 
@@ -71,72 +70,6 @@ function calcular(salario: number, admissao: Date, demissao: Date, tipo: TipoRes
   const totalLiquido = totalBruto - inss;
 
   return { verbas, inss, totalBruto, totalLiquido };
-}
-
-// PDF Document
-const pdfStyles = StyleSheet.create({
-  page: { padding: 40, fontFamily: 'Helvetica', backgroundColor: '#ffffff' },
-  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 4, color: '#1e1b4b' },
-  subtitle: { fontSize: 10, color: '#6b7280', marginBottom: 20 },
-  section: { marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  label: { fontSize: 10, color: '#374151' },
-  value: { fontSize: 10, fontWeight: 'bold', color: '#111827' },
-  total: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, marginTop: 8, backgroundColor: '#eef2ff', paddingHorizontal: 8, borderRadius: 4 },
-  totalLabel: { fontSize: 12, fontWeight: 'bold', color: '#1e1b4b' },
-  totalValue: { fontSize: 12, fontWeight: 'bold', color: '#059669' },
-  inssRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  inssLabel: { fontSize: 10, color: '#dc2626' },
-  inssValue: { fontSize: 10, fontWeight: 'bold', color: '#dc2626' },
-  header: { fontSize: 11, fontWeight: 'bold', color: '#4f46e5', marginBottom: 8, textTransform: 'uppercase' },
-});
-
-function RescisaoPDF({ funcionario, tipo, resultado, admissao, demissao }: any) {
-  return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        <Text style={pdfStyles.title}>Cálculo de Rescisão Trabalhista</Text>
-        <Text style={pdfStyles.subtitle}>FinanceAI — Módulo Empresarial</Text>
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.header}>Dados do Funcionário</Text>
-          {[
-            ['Funcionário', funcionario?.nome || ''],
-            ['Cargo', funcionario?.cargo || ''],
-            ['Tipo de Contrato', funcionario?.tipoContrato || ''],
-            ['Data de Admissão', admissao],
-            ['Data de Demissão', demissao],
-            ['Tipo de Rescisão', tipo],
-            ['Salário Bruto', fmt(funcionario?.salarioBruto || 0)],
-          ].map(([l, v]) => (
-            <View key={l} style={pdfStyles.row}>
-              <Text style={pdfStyles.label}>{l}</Text>
-              <Text style={pdfStyles.value}>{v}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.header}>Verbas Rescisórias</Text>
-          {resultado.verbas.map((v: Verba) => (
-            <View key={v.nome} style={pdfStyles.row}>
-              <Text style={{ ...pdfStyles.label, color: v.devida ? '#374151' : '#9ca3af' }}>{v.nome}{!v.devida ? ' (não devido)' : ''}</Text>
-              <Text style={{ ...pdfStyles.value, color: v.devida ? '#111827' : '#9ca3af' }}>{v.devida ? fmt(v.valor) : '—'}</Text>
-            </View>
-          ))}
-          <View style={pdfStyles.inssRow}>
-            <Text style={pdfStyles.inssLabel}>(-) INSS sobre Verbas Tributáveis</Text>
-            <Text style={pdfStyles.inssValue}>-{fmt(resultado.inss)}</Text>
-          </View>
-        </View>
-        <View style={pdfStyles.total}>
-          <Text style={pdfStyles.totalLabel}>Total Líquido a Pagar</Text>
-          <Text style={pdfStyles.totalValue}>{fmt(resultado.totalLiquido)}</Text>
-        </View>
-        <Text style={{ fontSize: 8, color: '#9ca3af', marginTop: 24 }}>
-          Documento gerado em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}. Valores estimados para fins de planejamento.
-        </Text>
-      </Page>
-    </Document>
-  );
 }
 
 export function RescisaoPage() {
@@ -183,11 +116,34 @@ export function RescisaoPage() {
     if (!resultado || !funcionario) return;
     setExporting(true);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const admissaoFmt = admissaoStr ? new Date(admissaoStr + 'T12:00:00').toLocaleDateString('pt-BR') : '';
       const demissaoFmt = dataDemissao ? new Date(dataDemissao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-      const blob = await pdf(<RescisaoPDF funcionario={funcionario} tipo={tipoRescisao} resultado={resultado} admissao={admissaoFmt} demissao={demissaoFmt} />).toBlob();
+      const receitas = resultado.verbas.filter(v => v.devida && v.valor > 0).reduce((s, v) => s + v.valor, 0);
+      const res = await fetch('/api/relatorio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          receitas: receitas.toFixed(2),
+          despesas: resultado.inss.toFixed(2),
+          balanco: resultado.totalLiquido.toFixed(2),
+          metas: [],
+          alertas: [
+            `Funcionário: ${funcionario.nome} (${funcionario.cargo})`,
+            `Tipo de Rescisão: ${tipoRescisao}`,
+            `Admissão: ${admissaoFmt} · Demissão: ${demissaoFmt}`,
+            `Total Bruto: ${fmt(resultado.totalBruto)} · INSS: ${fmt(resultado.inss)}`,
+            `Total Líquido a Pagar: ${fmt(resultado.totalLiquido)}`
+          ]
+        })
+      });
+      if (!res.ok) throw new Error('Falha ao gerar PDF.');
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `rescisao_${funcionario.nome.replace(/\s/g,'_')}.pdf`; a.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rescisao_${funcionario.nome.replace(/\s/g, '_')}.pdf`;
+      a.click();
       URL.revokeObjectURL(url);
       toast.success('PDF exportado com sucesso!');
     } catch (err) { console.error(err); toast.error('Erro ao gerar PDF.'); }
@@ -211,10 +167,13 @@ export function RescisaoPage() {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
+    navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
+    navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
+    navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
+    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   const inputCls = "w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all";
