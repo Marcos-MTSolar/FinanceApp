@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
 import { applyXpEvent, verificarExcessoDespesasDia } from '../lib/gamification';
@@ -30,8 +30,18 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
   const [categoria, setCategoria] = useState('Alimentação');
   const [data, setData] = useState(() => new Date().toISOString().split('T')[0]);
   const [recorrente, setRecorrente] = useState(false);
+  const [centroCusto, setCentroCusto] = useState('');
+  const [centros, setCentros] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!userId || modo !== 'empresarial' || !isOpen) return;
+    const unsub = onSnapshot(collection(db, `centrosCusto/${userId}/items`), snap => {
+      setCentros(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, [userId, modo, isOpen]);
 
   if (!isOpen) return null;
 
@@ -41,6 +51,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
     setCategoria('Alimentação');
     setTipo('despesa');
     setRecorrente(false);
+    setCentroCusto('');
     setError('');
     setLoading(false);
     onClose();
@@ -73,6 +84,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         data: formattedDate,
         recorrente,
         modo,
+        centroCusto: modo === 'empresarial' ? (centroCusto || '') : '',
         criadoEm: new Date().toISOString()
       });
 
@@ -220,6 +232,28 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
               />
             </div>
           </div>
+
+          {/* Campo Centro de Custo */}
+          {modo === 'empresarial' && tipo === 'despesa' && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                <Tag className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Centro de Custo</span>
+              </label>
+              <select
+                value={centroCusto}
+                onChange={(e) => setCentroCusto(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+              >
+                <option value="">Nenhum</option>
+                {centros.map((c) => (
+                  <option key={c.id} value={c.nome}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Campo Recorrente */}
           <div className="flex items-center gap-3 p-3.5 bg-gray-950 border border-gray-800 rounded-2xl">

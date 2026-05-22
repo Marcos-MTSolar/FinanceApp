@@ -625,6 +625,66 @@ Forneça uma explicação curta (máximo 3 parágrafos) sobre esse cenário, com
     }
   });
 
+  // API Route for Smart Corporate Alerts
+  app.post('/api/empresa/alertas', requireAuth, aiLimiter, async (req, res) => {
+    try {
+      const {
+        faturamentoMes,
+        totalDespesas,
+        totalFolha,
+        saldoAtual,
+        diasParaFimMes,
+        totalImpostos,
+        reservaTrabalhista,
+        totalFuncionarios
+      } = req.body;
+
+      const prompt = `
+Você é um consultor financeiro corporativo especialista em PMEs.
+Analise os seguintes indicadores financeiros da empresa para o mês corrente:
+- Faturamento do Mês: R$ ${faturamentoMes}
+- Total Despesas do Mês: R$ ${totalDespesas}
+- Total da Folha de Pagamento: R$ ${totalFolha}
+- Saldo de Caixa Atual: R$ ${saldoAtual}
+- Dias Restantes para o Fim do Mês: ${diasParaFimMes} dias
+- Total de Impostos do Mês: R$ ${totalImpostos}
+- Reserva Trabalhista Acumulada: R$ ${reservaTrabalhista}
+- Total de Funcionários Cadastrados: ${totalFuncionarios} funcionários
+
+Gere no máximo 5 alertas empresariais altamente direcionados com base nas seguintes análises de riscos:
+1. Caixa negativo / Insolvência: se o saldo de caixa atual for insuficiente para cobrir o burn rate diário estimado (despesas/30) nos dias restantes.
+2. Comprometimento da folha: se o total da folha for maior que 50% do faturamento do mês.
+3. Insuficiência de reservas: se a reserva trabalhista for nula ou inferior a 5% da folha de pagamento total anualizada estimada.
+4. Alta carga tributária: se os impostos representarem mais de 15% do faturamento bruto.
+5. Capital de Giro vulnerável: se o saldo de caixa atual for inferior a 10% do faturamento mensal.
+
+Retorne APENAS um objeto JSON com um array chamado 'alertas'. Cada item do array deve ter o formato exato:
+{
+  "tipo": "perigo" | "atencao" | "info",
+  "titulo": "Título Curto do Alerta",
+  "mensagem": "Texto explicativo curto com no máximo 2 frases."
+}
+Não adicione explicações, comentários ou markdown fora do JSON.
+`;
+
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.4,
+        response_format: { type: "json_object" },
+      });
+
+      const response = JSON.parse(chatCompletion.choices[0]?.message?.content || '{"alertas":[]}');
+      res.json(response);
+    } catch (error: any) {
+      if (error?.status === 429) {
+        return res.status(429).json({ error: 'Limite de requisições de IA atingido. Tente novamente mais tarde.' });
+      }
+      console.error('Corporate Alerts error:', error);
+      res.status(500).json({ error: 'Erro gerando alertas inteligentes corporativos' });
+    }
+  });
+
   // Simulação de Cloud Function (Pode ser chamada via Cron Job)
   app.post('/api/cron/alertas', async (req, res) => {
     try {

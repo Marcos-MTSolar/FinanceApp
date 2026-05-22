@@ -1,290 +1,591 @@
-# RESUMO MESTRE: Projeto AppFinance
+# RESUMO MESTRE — FINANCE AI
 
-Este documento é a fonte única de verdade (Single Source of Truth) para o projeto **AppFinance**. Ele sintetiza a arquitetura do sistema, regras de negócio, banco de dados, stack tecnológica, integração com APIs e o fluxo completo de desenvolvimento e deploy.
+## 1. VISÃO GERAL
+
+O **FinanceAI** é uma plataforma avançada de gestão e controle financeiro pessoal e empresarial, que utiliza inteligência artificial e conceitos profundos de gamificação (XP, níveis, bônus e penalidades de orçamento) para engajar e guiar o usuário na melhoria de sua saúde financeira.
+
+### Propósito do Sistema
+- Auxiliar o usuário no controle e organização de suas finanças diárias de forma simples e engajadora.
+- Classificar extratos bancários de forma automatizada e inteligente via inteligência artificial (reconhecendo entradas, saídas, taxas e categorias ideais).
+- Proporcionar um assistente conversacional inteligente que atua em tempo real com base no contexto financeiro real do usuário.
+- Oferecer simuladores de cenários de investimento e empréstimo com avaliações de risco geradas por inteligência artificial.
+- Emitir diagnósticos de saúde financeira e relatórios customizados em PDF estruturados e exportáveis.
+
+### Público-Alvo
+- **Pessoas Físicas (Modo Pessoal)**: Indivíduos que desejam monitorar gastos diários, estipular metas, economizar dinheiro e obter insights imediatos de hábitos de consumo.
+- **Pequenos Empreendedores e Autônomos (Modo Empresarial)**: Profissionais que necessitam separar finanças pessoais de corporativas, controlar capital de giro, margens de lucro estimadas e faturamento mensal.
+
+### Estágio Atual do Projeto
+- O projeto encontra-se em estágio altamente maduro de desenvolvimento e pronto para uso:
+  - **Frontend**: SPA construída em React 19, empacotada com Vite e estilizada com Tailwind CSS. Utiliza transições fluidas e barramentos de progresso gamificados.
+  - **Backend**: Servidor Express em Node.js operando localmente via script dedicado e adaptado para rotas serverless na Vercel.
+  - **Banco de Dados**: Integrado ao Google Firebase Auth e Firestore, com regras de segurança ativas e isolamento robusto de dados.
+  - **Mobile**: Configuração completa do Capacitor 8 pronta para gerar builds nativas Android (`debug` e `release`).
 
 ---
-
-## 1. Visão Geral do Sistema
-
-### O que o sistema faz
-O **AppFinance** é um assistente financeiro inteligente completo (PWA/Web/APK) projetado para simplificar e revolucionar a gestão de finanças pessoais e empresariais. Através de um sistema híbrido de inteligência artificial (Groq LLM) e gamificação estruturada (XP/Níveis), o sistema estimula comportamentos de saúde financeira saudáveis enquanto penaliza hábitos de risco. 
-
-O usuário pode gerenciar receitas comuns, rendas extras, criar metas com prazos e aportes, importar extratos bancários de forma totalmente automatizada (PDF/CSV/OFX/Excel) via IA e interagir com um chat financeiro inteligente com contexto em tempo real do banco de dados do próprio usuário.
-
-### Para quem é
-*   **Pessoal (B2C):** Indivíduos buscando organizar finanças pessoais, quitar dívidas, criar reserva de emergência e controlar gastos supérfluos de luxo.
-*   **Empresarial (B2B/Microempresas):** Microempreendedores individuais (MEIs) e pequenas empresas gerenciando fluxo de caixa, margem de lucro estimada, capital de giro e transações de faturamento.
-
-### Como está Hospedado e Deployado
-*   **Web Frontend & Backend Proxy:** O sistema é integrado para deploy automático na plataforma **Vercel** através da configuração descrita em `vercel.json`. O backend express roda como Vercel Serverless Functions (`api/index.ts`) e o frontend React é servido estaticamente do diretório `/dist`.
-*   **Aplicativo Mobile (APK/Capacitor):** Configurado via **Capacitor** (`capacitor.config.ts`) para compilar como um aplicativo nativo Android. O aplicativo móvel é gerado a partir do build estático do React (`/dist`) e empacotado localmente ou em pipelines de CI/CD para gerar arquivos `.apk`.
-
+> ⚠️ **ATENÇÃO**
+> O sistema está totalmente operacional e integrado ao Firebase local/produção. É fundamental que as chaves de ambiente backend (Groq e Firebase Admin) estejam devidamente preenchidas para que a inteligência artificial e as rotas autenticadas funcionem em sua totalidade.
 ---
 
-## 2. Tecnologias Utilizadas
+## 2. STACK TECNOLÓGICA
+
+O projeto utiliza um conjunto de tecnologias modernas e de alta performance no ecossistema Javascript/TypeScript:
 
 ### Frontend
-*   **React 19 & Vite:** Biblioteca principal para renderização de componentes e bundle rápido de desenvolvimento.
-*   **Tailwind CSS (V4):** Utilitários de CSS para desenvolvimento rápido de interfaces modernas.
-*   **Lucide React:** Biblioteca de ícones vetoriais modernos.
-*   **Framer Motion (motion):** Biblioteca de animações fluidas e micro-interações.
-*   **Recharts:** Biblioteca para exibição de gráficos financeiros dinâmicos e responsivos.
-*   **React Hot Toast:** Sistema de notificações de UI limpas e elegantes.
+- **React 19.0.1** (Core) & **React DOM 19.0.1**.
+- **TypeScript** para tipagem estática e segurança do código.
+- **Tailwind CSS v4** para estilização rápida, responsiva e moderna.
+- **Vite 6.2.3** como bundler de desenvolvimento e build de alta performance.
+- **React Router DOM 7.15.1** para controle de rotas dinâmicas e navegabilidade SPA.
+- **Recharts 3.8.1** para renderização de gráficos interativos de receitas vs. despesas.
+- **Framer Motion (motion 12.23.24)** para micro-animações, modais e transições dinâmicas.
+- **Lucide React 0.546.0** para o pacote visual de ícones.
+- **React Hot Toast 2.6.0** para notificações instantâneas no topo da interface.
+- **Canvas Confetti & React Confetti** para animações de sucesso (como na subida de nível ou conclusão de metas).
 
 ### Backend
-*   **Express (Node.js):** Utilizado como servidor proxy intermediário seguro para realizar chamadas a APIs restritas, parser de arquivos e geração de relatórios PDF.
-*   **Multer:** Middleware para tratamento e armazenamento em memória de uploads de arquivos.
-*   **PDF2JSON & PDF-Parse:** Bibliotecas dedicadas no backend para extração de texto a partir de arquivos PDF enviados pelos usuários (extratos e notas).
-*   **React-PDF Renderer (`@react-pdf/renderer`):** Utilizado no backend para gerar PDFs de relatórios financeiros de forma estruturada.
+- **Node.js** com execução TypeScript assistida por **tsx 4.21.0**.
+- **Express 4.21.2** como framework de servidor web e proxy.
+- **Esbuild 0.25.0** para compilação rápida do servidor de backend para formato de produção (`dist/server.cjs`).
+- **Helmet 8.1.0** para reforço de segurança através da configuração de cabeçalhos HTTP.
+- **Express Rate Limit 8.5.2** para conter e limitar requisições excessivas de IA (limite definido em 200 requisições/hora por usuário).
+- **Multer 2.1.1** para manuseio e armazenamento de arquivos de extrato em memória temporária.
+- **PDF2JSON 4.0.3** e **PDF-parse 1.1.1** para extração bruta de texto de extratos bancários digitais.
+- **XLSX (SheetJS) 0.18.5** para leitura de planilhas de transações em Excel.
 
-### Banco de Dados & Serviços Cloud
-*   **Firebase Authentication:** Autenticação segura via e-mail e senha.
-*   **Firebase Firestore:** Banco de dados NoSQL em tempo real para armazenamento de transações, metas, perfis, conquistas e dados de diagnósticos.
-*   **Firebase Admin SDK:** Utilizado no backend proxy Express para validação de JWT tokens e segurança em queries administrativas.
+### Banco de Dados e Storage
+- **Google Firebase Firestore**: Banco de dados NoSQL baseado em documentos e subcoleções em tempo real.
+- **Google Firebase Authentication**: Controle de logins, cadastros de e-mail/senha e sessões seguras no cliente.
+- **Firebase Admin SDK 13.10.0**: Utilizado no backend Express para decodificar e validar os JWT ID Tokens do Firebase.
+- ⚠️ **ATENÇÃO (STORAGE)**: O projeto **NÃO** utiliza armazenamento persistente de arquivos físicos na nuvem. Os extratos enviados para classificação são processados em buffer de memória diretamente pela API no backend e convertidos em texto, sem a necessidade de gravação física ou buckets dedicados no Firestore/Storage.
 
-### APIs Externas Integradas
-*   **API Groq (Modelos Llama):**
-    *   `llama-3.3-70b-versatile`: Modelo robusto de 70 bilhões de parâmetros utilizado para a classificação detalhada de extratos no endpoint `/api/ia/classificar` e no chat de conversação em tempo real `/api/groq/chat`.
-    *   `llama-3.1-8b-instant`: Modelo rápido de 8 bilhões de parâmetros utilizado para tarefas mais leves, como simulação de cenários (`/api/groq/simulador`), sugestão de metas financeiras (`/api/groq/sugerir-meta`), alertas de cron (`/api/cron/alertas`) e diagnósticos iniciais (`/api/diagnostico`).
-*   **Proxy Antigravity:** Integração de chamadas seguras para a API do Antigravity Platform através de `/api/antigravity/action`, repassando o UID do Firebase validado pelo backend proxy.
+### Integrações Externas
+- **Groq SDK 1.2.0**: Conecta com a API Groq para processamento de inteligência artificial de altíssima velocidade.
+  - **Llama 3.3 70B (llama-3.3-70b-versatile)**: Utilizado para a classificação analítica de extratos bancários e streaming de conversa do Assistente IA devido à sua alta precisão semântica.
+  - **Llama 3.1 8B (llama-3.1-8b-instant)**: Utilizado em tarefas rápidas baseadas em JSON estruturado, como geração de diagnósticos, sugestões inteligentes de metas, simulação de investimentos e execução de alertas.
+- **Antigravity Action Proxy**: Roteamento seguro das interações do frontend para a plataforma de desenvolvimento Antigravity `/api/antigravity/action`, ocultando segredos e chaves de API.
+- ⚠️ **ATENÇÃO (NÃO PRESENTE)**: Com base em uma busca abrangente em todo o codebase, **NÃO existem quaisquer códigos ou arquivos relacionados a Evolution API, Supabase Storage, ou Railway**. Essas ferramentas são totalmente inexistentes no codebase.
 
-### Autenticação e Segurança
-*   **JWT Token (Bearer):** O frontend envia o ID token do Firebase em cada requisição para o backend (`Authorization: Bearer <TOKEN>`), validado pelo middleware `requireAuth` que injeta o UID correspondente em `req.user`.
-*   **Helmet:** Configuração de cabeçalhos HTTP de segurança de forma restrita para produção.
-*   **Express Rate Limit:** Limitação de chamadas para APIs de IA (`aiLimiter` de max 200 requisições por hora) para evitar abusos de cota.
-*   **Firestore Security Rules (`firestore.rules`):** Regras restritas para que os usuários leiam/escrevam exclusivamente nos caminhos pertencentes ao seu próprio UID (Tenant Isolation).
+### Mobile
+- **Capacitor 8.3.4** (Core, CLI e Android): Bridge moderna para empacotamento da aplicação web como um aplicativo nativo para Android.
+- Configuração nativa sob a pasta `/android`, com builds automatizadas via Gradle.
 
 ---
+> ⚠️ **ATENÇÃO**
+> Não existem arquivos relacionados ao Supabase ou Railway no diretório. A persistência de dados ocorre exclusivamente no Firebase Firestore e a hospedagem backend é desenhada para arquitetura Vercel Serverless.
+---
 
-## 3. Estrutura de Arquivos
+## 3. ESTRUTURA DE ARQUIVOS
 
-Abaixo está o mapa completo de pastas e arquivos principais do projeto, acompanhado de suas respectivas responsabilidades:
+O repositório apresenta uma estrutura limpa e bem delimitada, separando a lógica cliente da lógica de rotas do servidor Express:
 
+```text
+financeai/
+└── AppFinance/
+    ├── api/
+    │   └── index.ts                 # Handler Express serverless para implantação no Vercel API
+    ├── src/
+    │   ├── components/
+    │   │   ├── FinanceChat.tsx      # Widget flutuante de bate-papo de inteligência artificial (todas as telas)
+    │   │   ├── NewTransactionModal.tsx # Modal de criação manual de receita/despesa (c/ verificação de XP)
+    │   │   ├── OnboardingWizard.tsx # Fluxo de configuração inicial e diagnóstico de saúde financeira
+    │   │   ├── ProtectedRoute.tsx   # Wrapper de rota protegida que valida sessões ativas do Firebase
+    │   │   └── Simulador.tsx        # Tela de simulações interativas de investimentos/empréstimos via IA
+    │   ├── hooks/
+    │   │   ├── useAuth.tsx          # Contexto e hook de autenticação e listeners do perfil no Firestore
+    │   │   └── usePlan.tsx          # Controle de modais de Upgrade de Plano (Free -> Pro -> Empresarial)
+    │   ├── lib/
+    │   │   ├── antigravityConfig.ts # Utilitários de requisição para proxy Antigravity
+    │   │   ├── firebaseConfig.ts    # Inicialização do Firebase Client SDK
+    │   │   ├── gamification.ts      # Catálogo centralizado de XP, níveis e penalidades de orçamento
+    │   │   └── seed.ts              # Função auxiliar para popular dados de teste (mocked transactions)
+    │   ├── pages/
+    │   │   ├── ChatPage.tsx         # Interface completa de chat em tempo real por streaming (SSE)
+    │   │   ├── Dashboard.tsx        # Central administrativa com resumos de despesas, receitas e progresso
+    │   │   ├── ImportPage.tsx       # Módulo de importação e processamento de arquivos de extrato via IA
+    │   │   ├── Login.tsx            # Tela moderna de Autenticação (Login e Cadastro com Firebase)
+    │   │   ├── MetasPage.tsx        # Módulo de gerenciamento de objetivos com sugestões dinâmicas da IA
+    │   │   ├── NiveisPage.tsx       # Tabela interativa detalhando todas as regras e conquistas de XP
+    │   │   └── RendaExtra.tsx       # Módulo para registro e monitoramento de receitas extras diversificadas
+    │   ├── App.tsx                  # Definição e roteamento primário via HashRouter
+    │   ├── index.css                # Configurações globais de layout e importações Tailwind CSS
+    │   └── main.tsx                 # Ponto de entrada de renderização do React
+    ├── android/                     # Estrutura nativa Android gerada pelo Capacitor
+    ├── Configure security rules     # Cópia sobressalente de regras inseguras temporárias de Firestore
+    ├── firestore.rules              # Arquivo de Regras de Segurança de Produção do Firestore
+    ├── server.ts                    # Servidor local Express em Node.js (Vite Dev Server & Proxy)
+    ├── serverReportGenerator.tsx    # Utilitário backend para compilar e gerar streams de PDF via React-PDF
+    ├── capacitor.config.json        # Configuração do Capacitor (AppName: AppFinance)
+    ├── tailwind.config.js           # Configurações adicionais de layout Tailwind
+    ├── tsconfig.json                # Configurações globais do compilador TypeScript
+    └── package.json                 # Definição de pacotes, scripts e metadados da aplicação
 ```
-AppFinance/
-├── api/
-│   └── index.ts                 # Ponto de entrada do backend serverless (Vercel) contendo todas as rotas e validações.
-├── src/
-│   ├── components/              # Componentes React reutilizáveis de UI.
-│   │   ├── Dashboard.tsx        # Blocos visuais principais, gráficos e painel de controle financeiro.
-│   │   ├── FinanceChat.tsx      # Interface de chat com o assistente IA.
-│   │   ├── HeaderXPBar.tsx      # Barra superior persistente mostrando Nível e Barra de XP do usuário.
-│   │   ├── ImportData.tsx       # Componente de upload e visualização da classificação de extratos.
-│   │   ├── Login.tsx            # Componente de login / criação de conta no Firebase Auth.
-│   │   ├── Metas.tsx            # Lista e formulários para criação e aporte em metas.
-│   │   ├── NewTransactionModal.tsx # Modal de inserção manual de despesas/receitas (chama regras de XP).
-│   │   ├── NotificacoesDropdown.tsx # Dropdown no cabeçalho contendo alertas gerados pelo sistema.
-│   │   ├── OnboardingWizard.tsx # Questionário interativo (Diagnóstico) para definir o perfil do usuário.
-│   │   ├── ProtectedRoute.tsx   # HOC de segurança para rotas restritas a usuários logados.
-│   │   └── Simulador.tsx        # Simulador de cenários financeiros com projeções de investimento/empréstimo.
-│   ├── hooks/                   # Custom Hooks para compartilhamento de estado.
-│   │   ├── useAuth.tsx          # Gerencia autenticação Firebase, dados do perfil do usuário e sincronização real-time.
-│   │   └── usePlan.tsx          # Gerencia controle de acesso a features Pro/Empresarial e modais de Upgrade.
-│   ├── lib/                     # Configurações do sistema e regras centrais.
-│   │   ├── antigravityConfig.ts # Utilitários para comunicação com o proxy Antigravity.
-│   │   ├── firebaseConfig.ts    # Inicialização do Firebase Client SDK.
-│   │   ├── gamification.ts      # Catálogo único de regras de XP, cálculo de níveis e verificação de penalidades.
-│   │   └── seed.ts              # Script para popular banco de dados com dados de teste.
-│   ├── pages/                   # Páginas da aplicação estruturando os layouts.
-│   │   ├── ChatPage.tsx         # Página inteira dedicada ao chat da IA.
-│   │   ├── Dashboard.tsx        # Página principal com métricas, gráficos e resumo.
-│   │   ├── ImportPage.tsx       # Página dedicada à importação de documentos bancários.
-│   │   ├── Login.tsx            # Página de autenticação / entrada do usuário.
-│   │   ├── MetasPage.tsx        # Página de metas com painel informativo de aportes.
-│   │   ├── NiveisPage.tsx       # Detalhes de ganhos/perdas de XP e tabela de níveis.
-│   │   ├── RendaExtra.tsx       # Gerenciamento de receitas adicionais recorrentes/únicas.
-│   │   └── Transacoes.tsx       # Tabela completa de histórico de transações com filtros avançados.
-│   ├── App.tsx                  # Arquivo principal do Frontend, configurando roteamento e Providers.
-│   ├── index.css                # Estilização global da aplicação (Tailwind).
-│   └── main.tsx                 # Arquivo de inicialização e montagem do React 19.
-├── server.ts                    # Servidor Express utilizado para desenvolvimento local e empacotamento.
-├── serverReportGenerator.tsx    # Gerador de layout PDF estruturado para relatórios do backend.
-├── capacitor.config.ts          # Arquivo de configuração de empacotamento do Capacitor (Android/APK).
-├── firebase.json                # Configurações do Firebase CLI para Hosting e local rules.
-├── firestore.rules              # Regras de segurança de escrita e leitura do banco Firestore.
-├── package.json                 # Declaração de scripts e dependências npm.
-├── vercel.json                  # Regras de roteamento e configurações de execução na Vercel.
-└── tsconfig.json                # Configurações de compilação do TypeScript.
+
+### Responsabilidade de Cada Arquivo Principal
+
+1. **`api/index.ts`**: Ponto de entrada das funções do servidor quando rodando em ambiente Vercel. Exporta o aplicativo Express para ser consumido como serverless functions.
+2. **`server.ts`**: Arquivo de inicialização local. Configura middlewares do Express (Helmet, CORS, Rate Limiters, Multer), monta o servidor Vite local para desenvolvimento e expõe as mesmas rotas de API do backend.
+3. **`serverReportGenerator.tsx`**: Compila e desenha as tabelas e folhas de estilo do PDF utilizando `@react-pdf/renderer` para exportação direta de relatórios no servidor.
+4. **`firestore.rules`**: Contém as diretrizes estritas do Firestore. Regula a segurança impedindo qualquer usuário não autenticado de ler ou escrever registros e limita os acessos de usuários normais estritamente à sua subcoleção contendo seu `userId`.
+5. **`src/App.tsx`**: Centraliza as rotas SPA e injeta os provedores globais de contexto de autenticação (`AuthProvider`) e de planos (`PlanProvider`).
+6. **`src/lib/gamification.ts`**: Arquivo crucial com regras puras de gamificação. Define os limiares de XP para cada nível, valores de eventos positivos, penalidades automáticas (despesas recorrentes, inatividade com metas ativas, excessos de gastos em lazer) e cálculo matemático do Score Financeiro.
+7. **`src/hooks/useAuth.tsx`**: Trata a persistência da sessão do usuário. Ao detectar novas sessões do Firebase Auth, busca o perfil correspondente na coleção `users` do Firestore e dispara promessas em background para recalcular inatividade e saldos.
+8. **`src/hooks/usePlan.tsx`**: Oferece o método `checkAccess(requiredPlan, feature)` que bloqueia o acesso dos usuários a recursos do plano Pro/Empresarial (ex: assistente de IA, simulador) exibindo um modal customizado de Upgrade de Plano que pode ser assinado instantaneamente via Firestore de forma fictícia para testes rápidos.
+9. **`src/pages/ImportPage.tsx`**: Permite arrastar extratos bancários nos formatos PDF, CSV, OFX e planilhas Excel. Realiza chamadas com buffers multipart para a API `/api/ia/classificar` e popula a tela com transações prontas para serem inseridas no Firestore.
+10. **`src/pages/ChatPage.tsx`**: Interface do assistente de finanças. Conecta-se à rota de streaming via Server-Sent Events (SSE), lendo as mensagens acumuladas em tempo real e atualizando o chat dinamicamente.
+
+---
+> ⚠️ **ATENÇÃO**
+> A duplicação de diretrizes entre o arquivo `Configure security rules` (aberto e inseguro por 30 dias) e o `firestore.rules` (regras estritas e blindadas) pode induzir a erros. Deve-se adotar prioritariamente as regras do `firestore.rules` na implantação final de produção do Firebase.
+---
+
+## 4. MÓDULOS E FUNCIONALIDADES
+
+O FinanceAI é estruturado em módulos independentes que oferecem uma experiência coesa e engajadora:
+
+### A. Fluxo de Autenticação e Registro (`/login`)
+- Interface estilizada com modo escuro contendo formulário de login por e-mail e senha.
+- Possibilita a criação de novas contas. Ao se cadastrar, o Firebase Auth gera uma credencial de segurança e o hook de autenticação insere automaticamente um documento inicial de perfil na coleção `users` do Firestore (iniciando o usuário no Nível 1 com 0 XP).
+
+### B. Fluxo de Onboarding e Diagnóstico (`/onboarding`)
+- Questionário passo a passo dinâmico para novos usuários.
+- Coleta dados como nome, renda fixa mensal, despesas estimadas, se possui reserva de emergência, se utiliza cartões de crédito e as principais metas desejadas.
+- O questionário envia os inputs ao backend na rota `/api/diagnostico`. O servidor calcula um score matemático básico (0-1000) e utiliza o Groq Llama 3.1 8B para gerar 3 sugestões financeiras personalizadas e curtas.
+- Ao salvar as informações, o usuário recebe um bônus de **+30 XP** no banco de dados e é redirecionado para a plataforma.
+
+### C. Dashboard Geral (`/dashboard`)
+- Apresenta métricas-chave em tempo real: Saldo Acumulado, Rendas Extras Totais e Despesas Consolidadas do mês atual.
+- Inclui gráficos analíticos interativos demonstrando a evolução de receitas vs. despesas.
+- Exibe o progresso de XP do usuário na parte superior com confetti animado ao subir de nível.
+- Renderiza avisos e alertas inteligentes baseados em anomalias identificadas (ex: excesso de despesas ou aproximação do prazo de metas).
+
+### D. Módulo de Transações (`/transacoes`)
+- Tabela interativa para visualização e acompanhamento de transações manuais e importadas.
+- Permite a filtragem por tipo (receitas ou despesas) e por categorias customizadas.
+- Modais rápidos de criação e edição manual de receitas/despesas.
+  - **Lógica Gamificada Integrada**:
+    - Ao adicionar manualmente uma receita, o usuário recebe **+10 XP**.
+    - Ao adicionar despesas manuais, o sistema valida no Firestore se o usuário já realizou 3 ou mais registros de despesa na data de hoje. Se sim, aplica uma penalidade de **-15 XP** (Excessos desnecessários de consumo) uma única vez por dia.
+
+### E. Módulo de Importação Inteligente (`/importar`)
+- Drag and Drop para envio de extratos bancários físicos ou em texto.
+- Suporta múltiplos arquivos de texto, PDF, OFX, CSV ou Excel.
+- Envia os buffers criptografados ao servidor na rota `/api/ia/classificar`. A inteligência artificial Llama 3.3 70B varre o texto, converte datas para o formato ISO, normaliza valores monetários decimais e classifica cada registro em categorias adequadas.
+- O usuário analisa a listagem estruturada gerada e, ao confirmar a importação geral, ganha um bônus de **+20 XP**.
+
+### F. Módulo de Objetivos e Metas (`/metas`)
+- Permite estipular objetivos específicos com títulos personalizados, valores a economizar, prazos e motivos associados.
+- Ao cadastrar uma meta, o usuário ganha **+15 XP**.
+- **Sugestões via IA**: Botão integrado que consome `/api/groq/sugerir-meta` enviando o contexto atual. A inteligência artificial Llama 3.1 8B sugere uma meta financeira curta, alcançável e divertida baseada no perfil.
+- Ao atingir o objetivo financeiro e marcar como concluída, o usuário recebe uma animação e um ganho expressivo de **+50 XP**.
+
+### G. Módulo de Renda Extra (`/renda-extra`)
+- Tela de inserção e controle de entradas auxiliares (ex: trabalhos freelance, vendas pontuais, dividendos).
+- Registros ajudam a recalcular o Score Financeiro global com bônus pela diversificação de receitas.
+- Cadastrar a primeira renda extra garante um bônus de **+15 XP**, e rendas extras recorrentes concedem **+20 XP**.
+
+### H. Chat Assistente IA (`/chat`) e Widget Flutuante (`/FinanceChat`)
+- Canal direto para interações inteligentes.
+- **Streaming por SSE (Server-Sent Events)**: O backend busca em tempo real o histórico e o contexto do usuário (saldo total, despesas por categoria, metas ativas e rendas extras) e monta um prompt restrito que obriga a IA a responder em no máximo duas sentenças objetivas, citando os valores corretos.
+- Exclusivo para assinantes a partir do plano Pro (restrição controlada ativamente via `usePlan` hook).
+
+### I. Simulador de Cenários Financiados (`/simulador`)
+- Ferramenta interativa de projeção financeira (Ex: compra de imóvel, financiamento de carro, solicitação de empréstimo empresarial).
+- O usuário fornece as variáveis (valor total, parcelas, juros, rendimento mensal) e a API calcula os montantes totais pagos.
+- O resultado é processado por IA no endpoint `/api/groq/simulador`, retornando um texto analítico de até 3 parágrafos explicando os riscos, a viabilidade técnica da simulação e sugestões práticas de controle de endividamento.
+
+### J. Tabela de Níveis e Regras (`/niveis`)
+- Tela explicativa das dinâmicas gamificadas do FinanceAI.
+- Exibe o progresso do usuário em tempo real, as regras exatas de ganho/perda de XP, dicas sobre como evitar penalizações e a tabela de níveis (do Nível 1 "Desorganizado" ao Nível 10 "Lenda").
+
+---
+> ⚠️ **ATENÇÃO**
+> Recursos complexos como o Assistente de Chat por Inteligência Artificial e o Simulador exigem planos de assinatura Pro ou superior. Caso o usuário tente acessá-los no plano Free, a aplicação impedirá o fluxo abrindo o modal de solicitação de upgrade.
+---
+
+## 5. BANCO DE DADOS
+
+A plataforma utiliza o **Firebase Firestore** estruturado como um banco NoSQL flexível e veloz.
+
+### Esquema de Coleções e Campos do Firestore
+
+```mermaid
+erDiagram
+    users {
+        string nome
+        string email
+        string modo
+        string plano
+        int xp
+        int nivel
+        timestamp criadoEm
+        timestamp ultimoAcesso
+        string ultimaAvaliacaoSaldo
+        string ultimaAvaliacaoLuxo
+        string lastPenalidadeDia
+    }
+    transacoes {
+        string descricao
+        double valor
+        string tipo
+        string categoria
+        timestamp data
+        timestamp criadoEm
+    }
+    metas {
+        string titulo
+        double valorAlvo
+        double progressoAtual
+        string status
+        timestamp prazo
+        string motivo
+        timestamp criadoEm
+    }
+    chats {
+        string text
+        string sender
+        timestamp timestamp
+    }
+    rendaExtra {
+        string descricao
+        double valor
+        string frequencia
+        timestamp data
+        timestamp criadoEm
+    }
+    diagnostico {
+        double rendaVenda
+        double dividasValor
+        boolean temReserva
+        double poupancaMensal
+        string objetivoDificuldade
+        boolean usaCartao
+        int score
+        array recomendacoes
+    }
+
+    users ||--o{ transacoes : "subcolecao items/"
+    users ||--o{ metas : "subcolecao items/"
+    users ||--o{ chats : "subcolecao messages/"
+    users ||--o{ rendaExtra : "subcolecao items/"
+    users ||--o{ diagnostico : "documento unico"
 ```
 
----
+#### 1. Coleção Principal: `users/{userId}`
+Contém os dados primários do usuário, suas configurações e controles de avaliação temporal de XP:
+- `nome` (string): Nome cadastrado.
+- `email` (string): E-mail do usuário.
+- `modo` (string): Modo de exibição atual (`pessoal` ou `empresarial`).
+- `plano` (string): Plano assinado (`Free`, `Pro` ou `Empresarial`).
+- `xp` (number): XP total acumulado (mínimo de 0).
+- `nivel` (number): Nível calculado com base no XP (1 a 10).
+- `criadoEm` (string ISO): Data de registro original da conta.
+- `ultimoAcesso` (string ISO): Data da última atividade/acesso à plataforma.
+- `ultimaAvaliacaoSaldo` (string `YYYY-MM`): Impede dupla atribuição mensal do bônus/penalidade de saldo.
+- `ultimaAvaliacaoLuxo` (string `YYYY-MM`): Impede dupla penalidade mensal por gastos exorbitantes em lazer.
+- `lastPenalidadeDia` (string `YYYY-MM-DD`): Controla e limita a penalidade diária de 3+ despesas registradas em um único dia.
 
-## 4. Módulos e Funcionalidades
+#### 2. Subcoleção: `transacoes/{userId}/items/{docId}`
+Registros financeiros individuais do usuário:
+- `descricao` (string): Nome ou identificador da despesa/receita.
+- `valor` (number): Valor monetário bruto (positivo, absoluto).
+- `tipo` (string): Tipo do lançamento (`receita` ou `despesa`).
+- `categoria` (string): Classificação da transação (ex: Transporte, Alimentação, Moradia, etc.).
+- `data` (string ou Timestamp): Data declarada do fato gerador.
+- `criadoEm` (Timestamp): Timestamp automático de persistência no banco de dados.
 
-### A. Autenticação & Onboarding
-*   **Login / Registro (`src/pages/Login.tsx`):** Criação de conta e autenticação via Firebase Auth.
-*   **Diagnóstico Inicial (`src/components/OnboardingWizard.tsx`):** Questionário interativo contendo fluxos diferenciados para perfis **Pessoal** (renda, dívidas, poupança, cartão) e **Empresarial** (faturamento, funcionários, capital de giro, lucro). A chamada calcula um score (0-1000) e consome a API do Groq para sugerir 3 recomendações personalizadas. Completar o diagnóstico concede **+30 XP** (e de forma hardcoded adiciona `+100 XP` no wizard do client).
+#### 3. Subcoleção: `metas/{userId}/items/{docId}`
+Metas estipuladas e monitoradas:
+- `titulo` (string): Título descritivo da meta.
+- `valorAlvo` (number): Montante financeiro a ser acumulado.
+- `progressoAtual` (number): Valor guardado ou progresso registrado.
+- `status` (string): Status operacional da meta (`ativa` ou `concluida`).
+- `prazo` (string): Data limite de vencimento.
+- `motivo` (string): Frase descritiva de motivação gerada manualmente ou por IA.
+- `criadoEm` (Timestamp): Data de criação da meta.
 
-### B. Dashboard Dinâmico (`src/pages/Dashboard.tsx`)
-*   Painel centralizado mostrando saldo atual, total de receitas, despesas e rendas extras.
-*   Alternador de modo ("Pessoal" / "Empresarial") que altera a visão inteira do dashboard de forma instantânea.
-*   Gráficos dinâmicos de faturamento e despesas via `Recharts`.
-*   Painel de nível atual e alertas de inteligência artificial gerados dinamicamente.
+#### 4. Subcoleção: `chats/{userId}/messages/{docId}`
+Histórico de mensagens de chat interativas:
+- `text` (string): Conteúdo textual enviado ou recebido.
+- `sender` (string): Identificador do remetente (`user` ou `ai`).
+- `timestamp` (Timestamp): Horário do envio.
 
-### C. Importação Automatizada de Extratos (`src/pages/ImportPage.tsx`)
-*   Upload de extratos no frontend via `src/components/ImportData.tsx`.
-*   O backend lê o arquivo bruto através de `PDFParser` e o envia estruturado ao modelo `llama-3.3-70b-versatile` no endpoint `/api/ia/classificar`.
-*   A IA extrai a descrição, valor, tipo (receita/despesa) e classifica a categoria (Transporte, Alimentação, Moradia, Saúde, Energia, Telecomunicações, Serviços, Pessoal, Outros) retornando um JSON limpo inserido diretamente no Firestore do usuário.
-*   Cada importação bem-sucedida concede **+20 XP** ao usuário.
+#### 5. Subcoleção: `rendaExtra/{userId}/items/{docId}`
+Registros auxiliares de entradas monetárias:
+- `descricao` (string): Identificador da fonte extra.
+- `valor` (number): Valor monetário.
+- `frequencia` (string): Periodicidade (`unica` ou `recorrente`).
+- `data` (string ou Timestamp): Data associada.
+- `criadoEm` (Timestamp): Data de persistência.
 
-### D. Histórico e Filtro de Transações (`src/pages/Transacoes.tsx`)
-*   Lista completa de transações estruturada em tabela.
-*   Filtros dinâmicos por tipo (todos, receita, despesa), categoria, período (este mês, último mês, 3 meses, todo o histórico) e origem (manual, importação, renda extra, meta).
-*   Campo de pesquisa por texto na descrição e categoria.
+#### 6. Documento Único: `diagnostico/{userId}`
+Respostas consolidadas e score obtido no questionário inicial:
+- Armazena as variáveis enviadas na etapa de Onboarding (renda, dívidas, reserva, poupança) mais o `score` final atribuído e o array de `recomendacoes` gerado pelo Groq Llama.
 
-### E. Gestão de Metas Financeiras (`src/pages/MetasPage.tsx`)
-*   Definição de metas com valor alvo, prazo final e acompanhamento de aportes acumulados.
-*   Painel retrátil explicativo ensinando a calcular aportes mensais (`Valor alvo ÷ número de meses`).
-*   Cadastro de meta concede **+15 XP** e concluir a meta concede **+50 XP** de recompensa.
+### Relacionamentos e Isolamento de Dados (Multitenancy)
+Sendo um banco de dados NoSQL baseado em documentos, o Firestore não aplica chaves estrangeiras rígidas relacionais. Em contrapartida, adota um modelo hierárquico aninhado por subcoleções dinâmicas estruturadas diretamente sob a chave identificadora `userId`.
 
-### F. Renda Extra (`src/pages/RendaExtra.tsx`)
-*   Gerenciamento específico de fontes de renda não recorrente (freelance, vendas, comissões).
-*   Possibilidade de registrar rendas de forma recorrente (semanal/mensal) ou única.
-*   O registro de renda extra insere automaticamente um registro no histórico de transações como receita de categoria correspondente.
-*   Cadastro de renda extra única concede **+15 XP** e recorrente concede **+20 XP**.
-
-### G. Assistente Financeiro IA (`src/pages/ChatPage.tsx`)
-*   Chat inteligente com interface baseada em chat bubbles.
-*   No backend, as últimas 10 mensagens são enviadas ao Groq (`llama-3.3-70b-versatile`) enriquecidas com o contexto financeiro em tempo real do usuário (receitas, despesas, metas ativas, rendas extras, transações recentes e gastos categorizados).
-*   As respostas são transmitidas via Server-Sent Events (SSE) para uma experiência de chat rápida e fluida.
-
----
-
-## 5. Banco de Dados & Regras de Acesso
-
-O banco de dados Firestore é estruturado sob o conceito de **Tenant Isolation** através de subcoleções de nível de usuário. 
-
-### Coleções Identificadas
-
-1.  **`users/{userId}`**
-    *   Armazena o perfil básico e estatísticas de gamificação do usuário.
-    *   *Campos:* `nome` (string), `email` (string), `modo` (string), `plano` (string), `xp` (number), `nivel` (number), `criadoEm` (string), `ultimoAcesso` (string), `lastPenalidadeDia` (string), `ultimaAvaliacaoSaldo` (string), `ultimaAvaliacaoLuxo` (string).
-2.  **`transacoes/{userId}/items/{documentId}`**
-    *   Contém todas as movimentações financeiras de entrada ou saída.
-    *   *Campos:* `descricao` (string), `valor` (number), `tipo` (string: `'receita' | 'despesa'`), `categoria` (string), `data` (string: `'YYYY-MM-DD'`), `origem` (string: `'manual' | 'importacao' | 'renda_extra' | 'meta'`), `rendaExtraId` (string, opcional), `modo` (string: `'pessoal' | 'empresarial'`), `criadoEm` (Timestamp).
-3.  **`metas/{userId}/items/{documentId}`** (ou subcoleção `/lista` em seeds)
-    *   Representa os objetivos financeiros cadastrados.
-    *   *Campos:* `titulo` (string), `valorAlvo` (number), `progressoAtual` (number), `prazo` (string), `status` (string: `'ativa' | 'concluida'`), `tipo` (string), `userId` (string).
-4.  **`rendaExtra/{userId}/items/{documentId}`**
-    *   Detalhamento de fontes de receita adicionais.
-    *   *Campos:* `descricao` (string), `valor` (number), `data` (string), `categoria` (string), `recorrente` (boolean), `frequencia` (string), `userId` (string), `criadoEm` (Timestamp).
-5.  **`diagnostico/{userId}`**
-    *   Salva o último diagnóstico efetuado pelo usuário.
-    *   *Campos:* `respostas` (map/JSON), `score` (number), `recomendacoes` (array of strings), `criadoEm` (string), `atualizadoEm` (string).
-6.  **`alertas/{userId}`**
-    *   Mensagens de notificação e anomalias de custos geradas via backend.
-    *   *Regra de escrita:* Apenas modificada internamente via backend.
-7.  **`chats/{userId}/messages`**, **`conquistas/{userId}/items`**, **`notificacoes/{userId}/items`**
-    *   Histórico de conversas, conquistas destravadas e notificações locais.
-
-### Regras do Firestore (`firestore.rules`)
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Garante que o usuário autenticado acesse exclusivamente os documentos com seu UID
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /transacoes/{userId}/items/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /metas/{userId}/items/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /chats/{userId}/messages/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /alertas/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // Apenas alterado via Admin SDK no Backend
-    }
-    match /notificacoes/{userId}/items/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /diagnostico/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /conquistas/{userId}/items/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+#### Regras de Isolamento Multi-tenant (company_id)
+- **IMPORTANTE**: O projeto **NÃO utiliza o campo `company_id`** em suas coleções e não possui tabelas SQL tradicionais corporativas.
+- O isolamento multi-tenant é implementado de forma segura e elegante com base no **User ID (UID)** gerado pelo Firebase Authentication.
+- As regras estritas de segurança em `firestore.rules` operam como barreiras lógicas na camada de banco de dados, avaliando a assinatura criptográfica dos tokens JWT das requisições e assegurando o isolamento de dados:
+  ```javascript
+  match /transacoes/{userId}/items/{document=**} {
+    allow read, write: if request.auth != null && request.auth.uid == userId;
   }
-}
+  ```
+  Isso garante que um usuário autenticado só possa visualizar, editar ou remover registros cujo caminho possua explicitamente seu próprio ID de usuário correspondente, impossibilitando acessos transversais de outros tenants.
+
+---
+> ⚠️ **ATENÇÃO**
+> A ausência de regras rígidas de relacionamento relacional no Firestore impõe que toda a validação de integridade referencial dos ID de usuário seja controlada diretamente pela aplicação no frontend e backend, garantindo que consultas nunca omitam a filtragem baseada no `userId`.
+---
+
+## 6. INTEGRAÇÕES EXTERNAS
+
+O ecossistema do FinanceAI funciona integrado a parceiros externos cruciais para oferecer inteligência, autenticação segura e recursos nativos:
+
+```mermaid
+graph TD
+    A[React Client Frontend] -- Auth / Firestore SDK --> B[Google Firebase]
+    A -- HTTP Requests --> C[Express Backend Server]
+    C -- Decodifica JWT ID Tokens --> B
+    C -- Groq SDK Llama --> D[API Groq Cloud]
+    C -- Relés de Ação --> E[Proxy Antigravity API]
+    A -- Empacotamento Nátivo --> F[Capacitor 8 Android]
 ```
 
----
+### 1. Google Firebase
+- **Autenticação**: Gerenciamento de e-mails, senhas e chaves de sessão diretamente no navegador do cliente sem persistência local de credenciais sensíveis.
+- **Banco de Dados (Firestore)**: Sincronização offline e consultas de baixa latência em subcoleções.
+- **Firebase Admin SDK (Servidor)**: Middleware de segurança que valida os cabeçalhos de autorização (`Bearer Token`) do servidor backend, descriptografando o token do Firebase e injetando as propriedades do usuário logado na requisição Express.
 
-## 6. Gamificação
+### 2. Groq AI Engine (Llama Models)
+- Integração profunda no servidor Express, distribuindo requisições inteligentes dependendo do nível de precisão de dados exigido:
+  - **Classificador de Extratos (`/api/ia/classificar`)**: Executa o modelo **llama-3.3-70b-versatile** com parâmetros rígidos de temperatura baixa (0.2) e formato estruturado JSON. A inteligência artificial atua interpretando transações bancárias complexas, taxas redundantes e formatos mistos brasileiros, identificando e listando datas e descrições higienizadas.
+  - **Bate-papo de Finanças (`/api/groq/chat`)**: Utiliza o modelo **llama-3.3-70b-versatile** configurado sob um prompt de sistema estrito de duas sentenças. O servidor busca os saldos, categorias de despesa, metas e registros extras do Firestore e alimenta o contexto da IA a cada envio de mensagem por Server-Sent Events (SSE).
+  - **Diagnosticador de Saúde (`/api/diagnostico`)**, **Simulador de Investimentos (`/api/groq/simulador`)**, **Sugeridor de Metas (`/api/groq/sugerir-meta`)** e **Processamento de Alertas (`/api/cron/alertas`)**: Executam o modelo ágil **llama-3.1-8b-instant** para garantir baixa latência nas respostas interativas JSON da interface.
 
-### Catálogo de Eventos de XP
-As pontuações são baseadas em comportamentos catalogados e monitorados em tempo real (`src/lib/gamification.ts`):
+### 3. Plataforma Antigravity Developer Proxy
+- Canal de comunicação frontend/servidor que estabelece o redirecionamento de eventos e ações seguras via Express, encapsulando segredos como a `ANTIGRAVITY_API_KEY` apenas no servidor.
 
-#### Ganhos de XP (Eventos Positivos)
-| Chave do Evento | XP Concedido | Ação correspondente |
-| :--- | :--- | :--- |
-| `IMPORTAR_EXTRATO` | `+20 XP` | Importação automática de extratos e NFs |
-| `CADASTRAR_META` | `+15 XP` | Cadastro de novas metas financeiras no painel |
-| `META_CONCLUIDA` | `+50 XP` | Atingir o valor total aportado na meta |
-| `ADICIONAR_RECEITA` | `+10 XP` | Registro manual de receita no histórico |
-| `DIAGNOSTICO_INICIAL` | `+30 XP` | Responder completamente o onboarding wizard |
-| `SALDO_POSITIVO_MES` | `+25 XP` | Terminar o mês com saldo total no positivo |
-| `RENDA_EXTRA_UNICA` | `+15 XP` | Cadastrar uma receita de renda extra pontual |
-| `RENDA_EXTRA_RECORRENTE` | `+20 XP` | Configurar renda recorrente adicional |
-
-#### Penalidades de XP (Eventos de Risco)
-| Chave do Evento | XP Descontado | Ação correspondente |
-| :--- | :--- | :--- |
-| `EXCESSO_DESPESAS_DIA` | `-15 XP` | Cadastrar 3 ou mais despesas no mesmo dia |
-| `SALDO_NEGATIVO_MES` | `-20 XP` | Encerrar o mês acumulado com saldo negativo |
-| `EXCESSO_LUXO` | `-10 XP` | Lazer e Assinaturas superiores a 40% da renda declarada |
-| `INATIVIDADE_COM_METAS` | `-5 XP` | Ficar 7+ dias sem abrir o app tendo metas ativas |
-
-*Nota: O XP total acumulado do usuário nunca cai abaixo de zero (`Math.max(0, novoXp)`).*
-
-### Tabela de Níveis e Progressão
-| Nível | Título | XP Mínimo Requerido |
-| :--- | :--- | :--- |
-| Nível 1 | Desorganizado | `0 XP` |
-| Nível 2 | Consciente | `100 XP` |
-| Nível 3 | Planejador | `300 XP` |
-| Nível 4 | Estrategista | `600 XP` |
-| Nível 5 | Investidor | `1000 XP` |
-| Nível 6 | Independente | `1500 XP` |
-| Nível 7 | Visionário | `2100 XP` |
-| Nível 8 | Mestre Financeiro | `2800 XP` |
-| Nível 9 | Magnata | `3600 XP` |
-| Nível 10 | Lenda | `4500 XP` |
+### 4. Vercel Serverless
+- Configuração de implantação sob arquitetura orientada a eventos. O arquivo `/api/index.ts` centraliza as rotas em formato Express que são compiladas como rotas serverless independentes na plataforma Vercel.
 
 ---
+> ⚠️ **ATENÇÃO (MUITO IMPORTANTE)**
+> - **NÃO EXISTE Evolution API no codebase**: Nenhuma rota ou controller de envio/recebimento de WhatsApp está configurada.
+> - **NÃO EXISTE Supabase Storage no codebase**: Não há buckets, políticas de segurança ou APIs do Supabase mapeadas. Os PDFs carregados não são persistidos fisicamente na nuvem, apenas lidos sob buffers voláteis em memória Node.js.
+> - **NÃO EXISTE deploy ativo no Railway**: O deploy do backend foi estruturado para ser embutido na arquitetura de Serverless Functions da Vercel ou executado localmente via Node.js.
+---
 
-## 7. Configurações e Deploy
+## 7. AUTENTICAÇÃO E SEGURANÇA
 
-### Variáveis de Ambiente Necessárias (.env)
-*   `VITE_FIREBASE_API_KEY`: Chave da API Web do Firebase Client.
-*   `VITE_FIREBASE_AUTH_DOMAIN`: Domínio de autenticação do Firebase.
-*   `VITE_FIREBASE_PROJECT_ID`: ID do projeto no Firebase Console.
-*   `VITE_FIREBASE_STORAGE_BUCKET`: Caminho do bucket de arquivos do Firebase.
-*   `VITE_FIREBASE_MESSAGING_SENDER_ID`: ID de mensagens push.
-*   `VITE_FIREBASE_APP_ID`: ID da aplicação registrada no painel web.
-*   `FIREBASE_SERVICE_ACCOUNT_JSON`: String JSON compactada contendo as credenciais da Conta de Serviço do Firebase Admin.
-*   `GROQ_API_KEY`: Chave secreta de autenticação na API do Groq LLM.
-*   `ANTIGRAVITY_API_KEY`: Chave secreta para comunicação na plataforma proxy Antigravity.
-*   `ANTIGRAVITY_API_URL`: URL base para as chamadas Antigravity.
-*   `PORT`: Porta de escuta do servidor (padrão `3000`).
+A segurança do FinanceAI foi estruturada sob múltiplos aspectos visando resguardar a privacidade dos dados financeiros e evitar vazamentos de chaves de API:
 
-### Configurações de Deploy (Vercel)
-O arquivo `vercel.json` gerencia o roteamento e execuções:
-*   Redireciona todas as chamadas `/api/*` para a Vercel Function compilada a partir de `api/index.ts`.
-*   Permite execução prolongada (`maxDuration: 30`) e memória estendida (`1024mb`) para evitar falhas ou estouros de limite no processamento pesado de arquivos PDF no endpoint `/api/ia/classificar`.
-*   Inclui dinamicamente os pacotes internos do `pdf-parse` para correto empacotamento da biblioteca serverless.
+### A. Autenticação Baseada em Tokens (JWT) no Backend
+- Todas as rotas críticas do backend Express (`/api/relatorio`, `/api/ia/classificar`, `/api/groq/chat`, `/api/groq/sugerir-meta`, `/api/groq/simulador`, `/api/antigravity/action`) exigem tokens de segurança nos cabeçalhos HTTP através do middleware `requireAuth`.
+- O cliente extrai o token dinâmico por meio do Firebase SDK (`auth.currentUser?.getIdToken()`) e insere-o no cabeçalho `Authorization: Bearer <TOKEN>`.
+- O servidor Express valida a assinatura desse token utilizando o Firebase Admin SDK (`admin.auth().verifyIdToken()`).
 
-### Empacotamento Android (Capacitor)
-O arquivo `capacitor.config.ts` define o ecossistema móvel:
-*   `appId`: `'com.financeai.app'`
-*   `appName`: `'FinanceAI'`
-*   `webDir`: `'dist'` (diretório de build compilado pelo Vite)
-*   **Android Schemes & Cleartext:** Configurações otimizadas para navegação restrita de requisições de API a domínios autorizados, permitindo comunicações com a plataforma Antigravity.
-*   **Comportamento:** Cor de fundo nativa configurada em `#030712` (bg-gray-950) e barra de status/overscroll desativada para visual nativo.
+### B. Fallback de Desenvolvimento local
+- Para viabilizar testes offline ou locais ágeis sem configuração imediata do Firebase Service Account no arquivo `.env`, o middleware implementa uma regra de fallback inteligente: se o Firebase Admin não estiver inicializado (`admin.apps.length === 0`), a requisição recebe um ID fictício (`mock_dev_uid`), liberando os fluxos locais de desenvolvimento.
+
+### C. Rate Limiting de Chamadas de IA
+- Para mitigar ataques de negação de serviço (DoS) e evitar esgotamento dos limites de requisição das chaves Groq API, o backend implementa o middleware de limitação de tráfego `aiLimiter`:
+  ```javascript
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // Janela de 1 hora
+    max: 200,                  // Limite de 200 requisições
+    message: { error: 'Limite de requisições de IA atingido. Faça upgrade do plano.' }
+  });
+  ```
+- Este limite é aplicado de forma global nas rotas críticas de inteligência artificial (`/api/ia/classificar`, `/api/groq/chat` e `/api/antigravity/action`).
+
+### D. Cabeçalhos de Segurança HTTP (Helmet)
+- Em ambientes produtivos, o middleware Helmet é ativado com políticas de segurança restritivas de Content Security Policy (CSP), desabilitando carregamentos externos de scripts e bloqueando injeções maliciosas na aplicação cliente:
+  ```javascript
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://*"],
+        connectSrc: ["'self'", "https://*"],
+      }
+    } : false
+  }));
+  ```
 
 ---
-*Este documento é atualizado continuamente à medida que novas features, configurações ou integrações são adicionadas ao ecossistema do **AppFinance**.*
+> ⚠️ **ATENÇÃO**
+> O fallback que atribui o token fictício `mock_dev_uid` quando o Firebase Admin SDK não está devidamente configurado deve ser **desativado obrigatoriamente** em ambientes produtivos para evitar fraudes ou acessos não autorizados por bypass de autenticação.
+---
+
+## 8. REGRAS DE NEGÓCIO
+
+Toda a dinâmica comportamental do aplicativo é regida por regras rígidas de gamificação e gestão contidas no arquivo `src/lib/gamification.ts`:
+
+### A. Tabela Geral de Níveis e XP
+
+O progresso do usuário é distribuído em **10 Níveis de Proficiência**:
+
+| Nível | Título | Mínimo de XP | Cor Visual Recomendada |
+| :---: | :--- | :---: | :--- |
+| **1** | Desorganizado | 0 XP | Cinza (`text-gray-500`) |
+| **2** | Consciente | 100 XP | Azul (`text-blue-500`) |
+| **3** | Planejador | 300 XP | Índigo (`text-indigo-500`) |
+| **4** | Estrategista | 600 XP | Roxo (`text-purple-500`) |
+| **5** | Investidor | 1.000 XP | Laranja (`text-orange-500`) |
+| **6** | Independente | 1.500 XP | Amarelo (`text-yellow-500`) |
+| **7** | Visionário | 2.100 XP | Esmeralda (`text-emerald-500`) |
+| **8** | Mestre Financeiro | 2.800 XP | Ciano (`text-cyan-500`) |
+| **9** | Magnata | 3.600 XP | Rosa (`text-rose-500`) |
+| **10**| Lenda | 4.500 XP | Âmbar (`text-amber-500`) |
+
+### B. Eventos Positivos (Ganhos de XP)
+- **Importar Extrato**: **+20 XP** por extrato importado.
+- **Cadastrar Nova Meta**: **+15 XP** ao registrar um novo objetivo.
+- **Meta Concluída**: **+50 XP** ao finalizar uma meta.
+- **Adicionar Receita**: **+10 XP** ao cadastrar manualmente uma entrada.
+- **Diagnóstico Inicial**: **+30 XP** ao finalizar a etapa de Onboarding.
+- **Saldo Positivo no Mês**: **+25 XP** por fechar o acumulado mensal acima de zero.
+- **Renda Extra Única**: **+15 XP** ao cadastrar a primeira renda extra.
+- **Renda Extra Recorrente**: **+20 XP** ao cadastrar fluxos regulares de renda extra.
+
+### C. Penalidades Financeiras (Perdas de XP)
+- O XP mínimo é **zero**; o usuário perde XP acumulado, mas nunca fica com pontuação negativa.
+- **Excesso de Despesas no Dia**: **-15 XP**. Aplicado se o usuário registrar 3 ou mais despesas manuais no mesmo dia. Limitado a uma aplicação diária registrada no campo `lastPenalidadeDia`.
+- **Saldo Negativo no Mês**: **-20 XP**. Aplicado se o fechamento mensal indicar mais despesas que receitas.
+- **Excesso de Luxo**: **-10 XP**. Aplicado se a soma de despesas nas categorias `Lazer` e `Assinatura` superar 40% da renda total declarada pelo usuário no mês.
+- **Inatividade com Metas Ativas**: **-5 XP**. Aplicado se o usuário permanecer sem acessar o aplicativo por 7 dias ou mais possuindo metas ativas pendentes.
+
+### D. Métricas de Score Financeiro
+- O Score Financeiro do usuário é dinâmico e calculado com base na taxa de comprometimento de despesas sobre receitas totais (Renda Fixa + Renda Extra):
+  - **Até 50% de comprometimento e saldo positivo**: Score Base = **85** ("Ótimo").
+  - **Até 70% de comprometimento e saldo positivo**: Score Base = **65** ("Bom").
+  - **Até 90% de comprometimento**: Score Base = **45** ("Regular").
+  - **Acima de 90%**: Score Base = **25** ("Crítico").
+- **Bônus de Diversificação**: Usuários que possuem mais de uma fonte de renda extra ativa recebem um bônus de **+10 pontos** adicionados diretamente ao Score Financeiro (limitado a 100 pontos de teto máximo).
+
+---
+> ⚠️ **ATENÇÃO**
+> - **NÃO EXISTE Whatsapp Flow no codebase**: O envio, recebimento, transferência ou automação por WhatsApp não existe no código.
+> - **NÃO EXISTE Funil de Vendas**: Não há painéis de funil de vendas, etapas de pipeline de lead ou conexões CRM no código deste projeto.
+---
+
+## 9. FLUXO DO WHATSAPP
+
+⚠️ **NOTA CRÍTICA DE ESCOPO (NÃO IMPLEMENTADO / TOTALMENTE AUSENTE DO CÓDIGO)**
+
+Conforme as diretrizes restritas de fidelidade ao codebase real analisado, o aplicativo **FinanceAI NÃO possui fluxos de WhatsApp integrados**:
+
+- **Envio de Mídias/Textos**: Totalmente inexistente. Não há envio automático ou manual de textos, áudios, imagens ou arquivos PDF via WhatsApp.
+- **Recebimento via Webhook**: Inexistente. Não existem endpoints configurados no servidor Express voltados para capturar payloads de mensagens recebidas de redes de mensageria externa.
+- **Upload de Mídias para Storage**: Ausente. Não há processamento ou upload de mídias enviadas por chat WhatsApp e, por conseguinte, nenhum campo como `media_url` ou indicativos de envio pelo usuário (`from_me` como `true` ou `false`) está implementado ou previsto no banco de dados Firestore.
+- **Instâncias Configuradas**: Não há instâncias de Evolution API configuradas no backend ou no frontend.
+
+---
+> ⚠️ **ATENÇÃO**
+> Caso o usuário precise de fluxos automáticos de lembretes ou extratos por WhatsApp, essa funcionalidade precisará ser desenvolvida do zero, pois é inexistente nas bibliotecas e rotas atuais do codebase.
+---
+
+## 10. BUILD E DEPLOY
+
+O fluxo de build e deploy da aplicação separa a distribuição estática do cliente da execução de servidores backend:
+
+### A. Deploy Frontend e Servidor na Vercel
+- O projeto foi projetado para rodar na infraestrutura da Vercel:
+  - O frontend é compilado na pasta estática `/dist` através do Vite via `vite build`.
+  - A API (/api/*) roda sobre rotas serverless orquestradas pelo Express no arquivo `/api/index.ts`.
+  - As diretivas de roteamento de arquivos e mapeamento estático são lidas e aplicadas pela Vercel de maneira nativa.
+
+### B. Scripts de Build no `package.json`
+- `npm run dev`: Executa localmente o servidor de desenvolvimento Express e o Vite (`tsx server.ts`).
+- `npm run build`:
+  1. Executa a compilação estática do React Client (`vite build`).
+  2. Compila e agrupa o arquivo de servidor `server.ts` utilizando o `esbuild` para gerar o bundle em arquivo único do CommonJS localizado em `dist/server.cjs`.
+- `npm run start`: Executa localmente o backend final de produção já compilado (`node dist/server.cjs`).
+- `npm run clean`: Remove artefatos temporários e pastas de build antigas (`dist/`).
+
+### C. Empacotamento Mobile (Android via Capacitor)
+A aplicação está configurada para build nativa Android e fornece comandos automatizados integrando o Vite ao Capacitor CLI:
+- `npm run build:android`: Define a variável de ambiente `CAPACITOR=true`, compila a aplicação com o Vite, atualiza os arquivos nativos do Android via `npx cap sync android` e abre a IDE Android Studio (`npx cap open android`).
+- `npm run build:apk:debug`: Compila e gera o pacote APK para testes em ambiente de depuração executando de forma automatizada o Gradle no repositório nativo do Android (`gradlew assembleDebug`).
+- `npm run build:apk:release`: Compila e gera o pacote APK assinado de produção para submissão à Google Play Store utilizando o Gradle (`gradlew assembleRelease`).
+
+---
+> ⚠️ **ATENÇÃO**
+> Durante o build mobile (`CAPACITOR=true`), é vital atentar para que as requisições HTTPS para a API local apontem para o host de rede correto do servidor de backend (e não para `localhost`), caso contrário o emulador Android falhará em conectar-se às rotas de IA e autenticação.
+---
+
+## 11. PROBLEMAS RESOLVIDOS
+
+Nesta seção, consolidamos as melhorias e correções arquiteturais documentadas no histórico recente do repositório:
+
+1. **Segurança de Endpoints no Backend**: Substituição do mock irrestrito nas rotas pelo uso obrigatório do middleware `requireAuth`, que valida ativamente os tokens JWT do Firebase Authentication no backend.
+2. **Prevenção de Abuso de Cota de IA**: Implementação do middleware de controle de tráfego `aiLimiter` no Express, mitigando gastos excessivos de infraestrutura ao barrar acessos acima de 200 chamadas/hora em rotas da Groq.
+3. **Robustez na Extração de Extratos (Absolute Values)**: Ajuste fino no parser inteligente de PDFs para converter strings decimais complexas brasileiras (ex: 1.860,32 com sinal negativo `-`) em valores matemáticos float absolutos e positivos no campo de valor, ajustando a detecção e inserção de transações no banco de dados.
+4. **Isolamento de Credenciais Confidenciais**: Migração da chamada da plataforma Antigravity (que expunha a chave secreta diretamente no cliente do navegador) para uma rota proxy segura no backend (`/api/antigravity/action`), resguardando as chaves confidenciais apenas em variáveis de ambiente protegidas no servidor.
+
+---
+> ⚠️ **ATENÇÃO**
+> Assegure que as bibliotecas e dependências externas instaladas no servidor estejam sempre atualizadas para coibir brechas conhecidas nas bibliotecas de leitura de arquivos PDF (como o pdf-parse).
+---
+
+## 12. DÉBITOS TÉCNICOS
+
+Identificamos os seguintes pontos de atenção arquitetural e débitos técnicos remanescentes no codebase:
+
+1. **Bypass de Autenticação (`mock_dev_uid`)**: O fallback para `mock_dev_uid` quando as chaves de serviço Firebase Admin estão ausentes facilita o desenvolvimento ágil, mas constitui um risco elevado caso ativado por engano em ambientes de produção.
+2. **Volatilidade de Arquivos Importados (Sem Persistência de Mídia)**: Os arquivos de extrato físico submetidos não são salvos em nenhum repositório físico na nuvem (Storage). Caso ocorra uma falha de conexão da IA no processamento, o usuário perde o arquivo em memória e precisa carregá-lo novamente do zero.
+3. **Ausência de Integração Real com Banco no Upgrade**: O upgrade de plano é simulado atualizando o campo `plano` no Firestore diretamente via UI de forma fictícia. Em produção, este fluxo necessita de integração segura a um gateway de pagamentos real (Stripe, Asaas, etc.).
+4. **Duplicidade de Regras de Segurança**: O arquivo `Configure security rules` contém regras temporárias frágeis que expiram em 30 dias, enquanto o `firestore.rules` apresenta a lógica estrita de produção. Isso pode confundir desenvolvedores no momento do deploy de segurança.
+
+---
+> ⚠️ **ATENÇÃO**
+> A ausência de um mecanismo de auditoria automatizado para monitorar logs de bypass de segurança no backend com o `mock_dev_uid` expõe a aplicação a vazamentos se a configuração de ambiente for corrompida.
+---
+
+## 13. BACKLOG E MELHORIAS SUGERIDAS
+
+Recomendamos as seguintes implementações estratégicas para futuras iterações e melhoria contínua da plataforma:
+
+1. **Persistência de Mídia Segura**: Implementar integração ao Firebase Storage para arquivamento seguro dos extratos físicos enviados, permitindo auditorias financeiras futuras dos PDFs e planilhas inseridos.
+2. **Notificações Push Reais**: Adicionar a dependência `@capacitor/push-notifications` e configurar o Firebase Cloud Messaging (FCM) para emitir alertas e avisos nativos em dispositivos Android quando o usuário sofrer penalidades de orçamento ou se aproximar do prazo de conclusão de metas.
+3. **Gateway de Pagamento Integrado**: Mapear webhooks e APIs para gerenciar faturamentos, cobranças de mensalidade e transição automatizada de planos Pro/Empresarial.
+4. **Multi-usuários e Contabilidade**: Implementar a funcionalidade descrita no plano Empresarial que permite acesso restrito para contadores e gestão de múltiplos perfis integrados sob a mesma empresa cadastrada no Firestore.
+5. **Automação de Testes de UI**: Adicionar frameworks de testes visuais automatizados (como Cypress ou Playwright) para mitigar falhas em fluxos críticos como Onboarding e Importações Inteligentes de extrato.
+
+---
+> ⚠️ **ATENÇÃO**
+> Toda nova feature contendo IA que for implementada deve passar rigorosamente pelo fluxo de validação de plano atrelado ao `usePlan` hook, de modo a evitar brechas na monetização de recursos Pro/Empresarial da plataforma.
+---
+
+## 14. VARIÁVEIS DE AMBIENTE
+
+Para a correta execução local e em produção da plataforma, certifique-se de configurar os seguintes arquivos e variáveis:
+
+### A. Variáveis do Frontend (`AppFinance/.env` ou Variáveis de Compilação Vite)
+Essas variáveis alimentam a conexão com os serviços do Google Firebase no cliente e precisam obrigatoriamente iniciar com o prefixo `VITE_`:
+- `VITE_FIREBASE_API_KEY`: Chave de API pública do Firebase Client.
+- `VITE_FIREBASE_AUTH_DOMAIN`: Domínio de autenticação associado ao projeto.
+- `VITE_FIREBASE_PROJECT_ID`: Identificador único do projeto Firebase.
+- `VITE_FIREBASE_STORAGE_BUCKET`: Caminho do bucket de armazenamento (caso habilitado).
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`: ID do remetente para configurações de notificação.
+- `VITE_FIREBASE_APP_ID`: Identificador de aplicação exclusivo gerado pelo Firebase.
+
+### B. Variáveis do Servidor Backend (`AppFinance/.env` ou Servidor Vercel)
+Esses tokens e segredos são estritamente confidenciais e residem apenas no lado do servidor, nunca expostos ao código do navegador cliente:
+- `GROQ_API_KEY`: Chave secreta de autenticação e consumo de inteligência artificial na Groq Cloud.
+- `FIREBASE_SERVICE_ACCOUNT_JSON`: String compactada do JSON da conta de serviço gerada no painel Firebase, necessária para autorizar o Firebase Admin SDK a ler e escrever dados dinamicamente.
+- `ANTIGRAVITY_API_URL`: Rota da API base da plataforma Antigravity (ex: `https://api.antigravity.dev/v1`).
+- `ANTIGRAVITY_API_KEY`: Token Bearer de acesso secreto de desenvolvedor à API Antigravity.
+- `PORT` (Opcional): Porta local de execução do servidor Express (padrão `3000`).
+
+---
+> ⚠️ **ATENÇÃO**
+> Nunca envie ou comite os arquivos `.env` ou arquivos contendo as chaves de serviço JSON do Firebase para repositórios públicos do GitHub/Gitlab, pois isso compromete totalmente as chaves confidenciais do servidor e permite fraudes.
+---

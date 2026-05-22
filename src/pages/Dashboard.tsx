@@ -30,7 +30,14 @@ import {
   MessageCircle,
   Plus,
   Briefcase,
-  Trophy
+  Trophy,
+  Users,
+  FileText,
+  PiggyBank,
+  Percent,
+  Tag,
+  Activity,
+  Scale
 } from 'lucide-react';
 
 export function Dashboard() {
@@ -347,6 +354,17 @@ export function Dashboard() {
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
+
+  if (profile?.modo === 'empresarial') {
+    navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
+    navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
+    navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
+    navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
+    navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
+    navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
+    navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
+    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">

@@ -27,7 +27,15 @@ import {
   ShoppingBag,
   Clock,
   DollarSign,
-  Star
+  Star,
+  Briefcase,
+  Users,
+  FileText,
+  PiggyBank,
+  Percent,
+  Tag,
+  Activity,
+  Scale
 } from 'lucide-react';
 import { LEVEL_THRESHOLDS, XP_EVENTS } from '../lib/gamification';
 
@@ -67,6 +75,17 @@ export function NiveisPage() {
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
+
+  if (profile?.modo === 'empresarial') {
+    navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
+    navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
+    navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
+    navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
+    navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
+    navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
+    navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
+    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+  }
 
   const currentXp = profile?.xp || 0;
   

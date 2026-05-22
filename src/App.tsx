@@ -48,6 +48,14 @@ import { Login } from './pages/Login';
 import { Toaster } from 'react-hot-toast';
 import { RendaExtra } from './pages/RendaExtra';
 import { FinanceChat } from './components/FinanceChat';
+import { CadastroEmpresaPage } from './pages/CadastroEmpresaPage';
+import { FuncionariosPage } from './pages/FuncionariosPage';
+import { RescisaoPage } from './pages/RescisaoPage';
+import { ReservaTrabalhistaPage } from './pages/ReservaTrabalhistaPage';
+import { ImpostosPage } from './pages/ImpostosPage';
+import { CentroCustosPage } from './pages/CentroCustosPage';
+import { IndicadoresPage } from './pages/IndicadoresPage';
+import { DemonstrativosPage } from './pages/DemonstrativosPage';
 
 export default function App() {
   return (
@@ -130,6 +138,28 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/empresa/cadastro"
+                element={
+                  <ProtectedRoute>
+                    <CadastroEmpresaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresa/funcionarios"
+                element={
+                  <ProtectedRoute>
+                    <FuncionariosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/empresa/rescisao" element={<ProtectedRoute><RescisaoPage /></ProtectedRoute>} />
+              <Route path="/empresa/reservas" element={<ProtectedRoute><ReservaTrabalhistaPage /></ProtectedRoute>} />
+              <Route path="/empresa/impostos" element={<ProtectedRoute><ImpostosPage /></ProtectedRoute>} />
+              <Route path="/empresa/centro-custos" element={<ProtectedRoute><CentroCustosPage /></ProtectedRoute>} />
+              <Route path="/empresa/indicadores" element={<ProtectedRoute><IndicadoresPage /></ProtectedRoute>} />
+              <Route path="/empresa/demonstrativos" element={<ProtectedRoute><DemonstrativosPage /></ProtectedRoute>} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
             <FinanceChat />
