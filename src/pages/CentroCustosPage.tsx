@@ -10,7 +10,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
   PiggyBank, Percent, Tag, Plus, Trash2, Loader2, PieChart
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -140,6 +140,10 @@ export function CentroCustosPage() {
     navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
     navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   return (

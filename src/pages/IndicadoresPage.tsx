@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
   PiggyBank, Percent, Tag, Activity, ArrowUpRight, DollarSign, TrendingDown
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -153,6 +153,10 @@ export function IndicadoresPage() {
     navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   const inputCls = "w-full px-3 py-2 bg-gray-950 border border-gray-850 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all";

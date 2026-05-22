@@ -39,7 +39,7 @@ import {
   Tag,
   Activity,
   Scale
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -365,6 +365,10 @@ export function Dashboard() {
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
     navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   return (

@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
   PiggyBank, Percent, Calculator, Save, CheckCircle2, AlertCircle, Calendar, Plus
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -197,6 +197,10 @@ export function ImpostosPage() {
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
     navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
     navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   const inputCls = "w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all";

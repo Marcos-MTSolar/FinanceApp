@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
   PiggyBank, Save, Loader2, ChevronDown, ChevronUp
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -141,6 +141,10 @@ export function ReservaTrabalhistaPage() {
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
     navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   const cofrinhos = [

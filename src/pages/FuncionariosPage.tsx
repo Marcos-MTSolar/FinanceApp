@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Plus, Users, Calculator,
   Loader2, Save, XCircle, Building
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 interface Funcionario {
   id: string;
@@ -120,6 +120,10 @@ export function FuncionariosPage() {
   if (profile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   const inputCls = "w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all";

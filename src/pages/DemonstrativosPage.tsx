@@ -10,7 +10,7 @@ import {
   LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
   TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
   PiggyBank, Percent, Tag, Calculator, Scale, Compass, Calendar, Download, Save, CheckCircle, AlertTriangle
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -346,6 +346,10 @@ export function DemonstrativosPage() {
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Calculator });
     navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   const tableHeaderCls = "px-6 py-3.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider";

@@ -20,7 +20,7 @@ import {
   LogOut,
   Save,
   Loader2
-} from 'lucide-react';
+, Network, CheckSquare } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebaseConfig';
 
@@ -163,6 +163,10 @@ export function CadastroEmpresaPage() {
   // Adiciona a rota ativa no menu se for empresarial
   if (profile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
+      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
+      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
+    }
   }
 
   if (authLoading || fetchingData) {

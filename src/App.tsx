@@ -56,6 +56,8 @@ import { ImpostosPage } from './pages/ImpostosPage';
 import { CentroCustosPage } from './pages/CentroCustosPage';
 import { IndicadoresPage } from './pages/IndicadoresPage';
 import { DemonstrativosPage } from './pages/DemonstrativosPage';
+import { PlanoContasPage } from './pages/PlanoContasPage';
+import { ConciliacaoPage } from './pages/ConciliacaoPage';
 
 export default function App() {
   return (
@@ -160,6 +162,8 @@ export default function App() {
               <Route path="/empresa/centro-custos" element={<ProtectedRoute><CentroCustosPage /></ProtectedRoute>} />
               <Route path="/empresa/indicadores" element={<ProtectedRoute><IndicadoresPage /></ProtectedRoute>} />
               <Route path="/empresa/demonstrativos" element={<ProtectedRoute><DemonstrativosPage /></ProtectedRoute>} />
+              <Route path="/empresa/plano-contas" element={<ProtectedRoute><PlanoContasPage /></ProtectedRoute>} />
+              <Route path="/empresa/conciliacao" element={<ProtectedRoute><ConciliacaoPage /></ProtectedRoute>} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
             <FinanceChat />
