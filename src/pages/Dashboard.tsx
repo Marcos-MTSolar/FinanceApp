@@ -9,6 +9,7 @@ import { HeaderXPBar } from '../components/HeaderXPBar';
 import { calcularScoreFinanceiro } from '../lib/gamification';
 import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } from '../components/Dashboard';
 import { NewTransactionModal } from '../components/NewTransactionModal';
+import { AlertasEmpresariais } from '../components/AlertasEmpresariais';
 import { NotificacoesDropdown, criarNotificacao } from '../components/NotificacoesDropdown';
 import { 
   LayoutDashboard, 
@@ -554,7 +555,8 @@ export function Dashboard() {
 
           {/* Renderização dos Cards Baseada no Modo */}
           {modo === 'empresarial' ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Faturamento */}
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
@@ -626,6 +628,10 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
+            
+            {/* Alertas Inteligentes Empresariais */}
+            <AlertasEmpresariais />
+            </>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6">
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/40 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-indigo-500/50 transition-all duration-300">
