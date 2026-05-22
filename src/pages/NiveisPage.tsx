@@ -3,40 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  Target, 
-  User, 
-  LogOut, 
-  Upload, 
-  MessageCircle, 
-  Shield, 
-  Menu, 
-  X,
-  Trophy,
-  Zap,
-  FileUp,
-  CheckCircle2,
-  TrendingUp,
-  TrendingDown,
-  Info,
-  AlertTriangle,
-  CalendarX,
-  Wallet,
-  ShoppingBag,
-  Clock,
-  DollarSign,
-  Star,
-  Briefcase,
-  Users,
-  FileText,
-  PiggyBank,
-  Percent,
-  Tag,
-  Activity,
-  Scale
-, Network, CheckSquare } from 'lucide-react';
+import { Activity, AlertTriangle, Briefcase, CalendarX, CheckCircle2, CheckSquare, Clock, CreditCard, DollarSign, FileText, FileUp, Info, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Scale, Shield, ShoppingBag, Star, Tag, Target, TrendingDown, TrendingUp, Trophy, Upload, User, Users, Wallet, X, Zap } from 'lucide-react';
 import { LEVEL_THRESHOLDS, XP_EVENTS } from '../lib/gamification';
 
 export function NiveisPage() {
@@ -76,7 +43,8 @@ export function NiveisPage() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
@@ -85,10 +53,8 @@ export function NiveisPage() {
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
     navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   const currentXp = profile?.xp || 0;

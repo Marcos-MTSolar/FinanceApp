@@ -5,12 +5,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firesto
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import {
-  LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
-  TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
-  PiggyBank, Percent, Tag, Plus, Edit2, Trash2, Loader2, FolderTree,
-  ChevronDown, ChevronRight, Save, Network, CheckSquare, Activity, Scale
-} from 'lucide-react';
+import { Activity, Briefcase, CheckSquare, ChevronDown, ChevronRight, CreditCard, Edit2, FileText, FolderTree, LayoutDashboard, Loader2, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Save, Scale, Shield, Tag, Target, Trash2, TrendingUp, Trophy, Upload, Users, X } from 'lucide-react';
 
 interface Account {
   id: string;
@@ -254,7 +249,8 @@ export function PlanoContasPage() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });

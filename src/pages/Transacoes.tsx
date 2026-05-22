@@ -6,36 +6,7 @@ import toast from 'react-hot-toast';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { NewTransactionModal } from '../components/NewTransactionModal';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  Target, 
-  User, 
-  LogOut, 
-  Search, 
-  Shield, 
-  Filter, 
-  Trash2, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Plus, 
-  Menu, 
-  X,
-  Calendar,
-  Tag,
-  Upload,
-  MessageCircle,
-  Trophy,
-  TrendingUp,
-  Briefcase,
-  Users,
-  FileText,
-  PiggyBank,
-  Percent,
-  Tag,
-  Activity,
-  Scale
-, Network, CheckSquare } from 'lucide-react';
+import { Activity, ArrowDownLeft, ArrowUpRight, Briefcase, Calendar, CheckSquare, CreditCard, FileText, Filter, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Scale, Search, Shield, Tag, Target, Trash2, TrendingUp, Trophy, Upload, User, Users, X } from 'lucide-react';
 
 const CATEGORIES = [
   'Alimentação',
@@ -233,7 +204,8 @@ export function Transacoes() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
@@ -242,10 +214,8 @@ export function Transacoes() {
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
     navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   return (

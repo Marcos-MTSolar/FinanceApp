@@ -11,35 +11,7 @@ import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } fro
 import { NewTransactionModal } from '../components/NewTransactionModal';
 import { AlertasEmpresariais } from '../components/AlertasEmpresariais';
 import { NotificacoesDropdown, criarNotificacao } from '../components/NotificacoesDropdown';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  Target, 
-  User, 
-  LogOut, 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  Bell, 
-  Search, 
-  Shield,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Menu,
-  X,
-  Upload,
-  MessageCircle,
-  Plus,
-  Briefcase,
-  Trophy,
-  Users,
-  FileText,
-  PiggyBank,
-  Percent,
-  Tag,
-  Activity,
-  Scale
-, Network, CheckSquare } from 'lucide-react';
+import { Activity, ArrowDownLeft, ArrowUpRight, Bell, Briefcase, CheckSquare, CreditCard, FileText, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Scale, Search, Shield, Tag, Target, TrendingDown, TrendingUp, Trophy, Upload, User, Users, Wallet, X } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -356,7 +328,8 @@ export function Dashboard() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
@@ -365,10 +338,8 @@ export function Dashboard() {
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
     navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   return (

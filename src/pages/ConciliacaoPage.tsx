@@ -5,13 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import {
-  LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
-  TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
-  PiggyBank, Percent, Tag, Plus, Trash2, Loader2, RefreshCw, CheckCircle,
-  AlertTriangle, AlertCircle, FileCheck, Check, Info, Network, CheckSquare,
-  Activity, Scale
-} from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Briefcase, Check, CheckCircle, CheckSquare, CreditCard, FileCheck, FileText, Info, LayoutDashboard, Loader2, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, RefreshCw, Scale, Shield, Tag, Target, Trash2, TrendingUp, Trophy, Upload, Users, X } from 'lucide-react';
 
 interface BankTransaction {
   id: string;
@@ -255,7 +249,8 @@ export function ConciliacaoPage() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });

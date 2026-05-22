@@ -4,23 +4,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  Target, 
-  Upload, 
-  MessageCircle, 
-  Trophy,
-  TrendingUp,
-  Shield,
-  Briefcase,
-  Building,
-  Menu,
-  X,
-  LogOut,
-  Save,
-  Loader2
-, Network, CheckSquare } from 'lucide-react';
+import { Activity, Briefcase, Building, CheckSquare, CreditCard, FileText, LayoutDashboard, Loader2, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Save, Scale, Shield, Tag, Target, TrendingUp, Trophy, Upload, Users, X } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebaseConfig';
 
@@ -160,13 +144,18 @@ export function CadastroEmpresaPage() {
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
 
-  // Adiciona a rota ativa no menu se for empresarial
-  if (profile?.modo === 'empresarial') {
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
+    navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
+    navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
+    navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
+    navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
+    navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
+    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   if (authLoading || fetchingData) {

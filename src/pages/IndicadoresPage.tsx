@@ -5,11 +5,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import {
-  LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
-  TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
-  PiggyBank, Percent, Tag, Activity, ArrowUpRight, DollarSign, TrendingDown
-, Network, CheckSquare } from 'lucide-react';
+import { Activity, ArrowUpRight, Briefcase, CheckSquare, CreditCard, DollarSign, FileText, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Scale, Shield, Tag, Target, TrendingDown, TrendingUp, Trophy, Upload, Users, X } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -145,7 +141,9 @@ export function IndicadoresPage() {
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
-  if (profile?.modo === 'empresarial') {
+
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
@@ -153,10 +151,9 @@ export function IndicadoresPage() {
     navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
     navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
     navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
-      if (!navItems.some(item => item.path === '/empresa/plano-contas')) {
-      navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-      navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-    }
+    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
+    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
+    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
   }
 
   const inputCls = "w-full px-3 py-2 bg-gray-950 border border-gray-850 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all";

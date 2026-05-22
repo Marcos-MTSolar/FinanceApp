@@ -5,12 +5,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import {
-  LayoutDashboard, CreditCard, Target, Upload, MessageCircle, Trophy,
-  TrendingUp, Shield, Briefcase, Menu, X, LogOut, Users, FileText,
-  Calculator, Download, CheckCircle2, XCircle as XIcon,
-  Network, CheckSquare, PiggyBank, Percent, Tag, Activity, Scale
-} from 'lucide-react';
+import { Activity, Briefcase, Calculator, CheckCircle2, CheckSquare, CreditCard, Download, FileText, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Scale, Shield, Tag, Target, TrendingUp, Trophy, Upload, Users, X, XCircle as XIcon } from 'lucide-react';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -163,7 +158,9 @@ export function RescisaoPage() {
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
     { name: 'Níveis', path: '/niveis', icon: Trophy },
   ];
-  if (profile?.modo === 'empresarial') {
+
+  const userProfile = profile;
+  if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
     navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
