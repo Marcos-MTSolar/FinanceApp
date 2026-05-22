@@ -110,7 +110,7 @@ export function CadastroEmpresaPage() {
       await setDoc(docRef, {
         ...form,
         atualizadoEm: new Date().toISOString()
-      });
+      }, { merge: true });
       toast.success('Dados cadastrais da empresa salvos com sucesso! 🏢🎉');
     } catch (err) {
       console.error('Erro ao salvar dados da empresa:', err);

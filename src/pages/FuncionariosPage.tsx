@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -33,7 +33,7 @@ function calcularCustos(salario: number) {
   return { inssPatronal, fgtsMensal, ratSat, terceiros, provisaoFerias, adicionalFerias, provisao13, multaRescisoria, custoRealMensal };
 }
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 const EMPTY_FORM = { nome: '', cpf: '', rg: '', endereco: '', cargo: '', salarioBruto: 0, dataAdmissao: '', tipoContrato: 'CLT' };
 
@@ -49,6 +49,7 @@ export function FuncionariosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => setUser(u));
@@ -57,12 +58,14 @@ export function FuncionariosPage() {
 
   useEffect(() => {
     if (!user?.uid) { setLoading(false); return; }
-    const unsub = onSnapshot(collection(db, `funcionarios/${user.uid}/items`), snap => {
-      setFuncionarios(snap.docs.map(d => ({ id: d.id, ...d.data() } as Funcionario)));
-      setLoading(false);
-    }, err => { console.error(err); setLoading(false); });
-    return () => unsub();
-  }, [user?.uid]);
+    setLoading(true);
+    getDocs(collection(db, `funcionarios/${user.uid}/items`))
+      .then(snap => {
+        setFuncionarios(snap.docs.map(d => ({ id: d.id, ...d.data() } as Funcionario)));
+        setLoading(false);
+      })
+      .catch(err => { console.error(err); setLoading(false); });
+  }, [user?.uid, refreshTrigger]);
 
   useEffect(() => {
     if (!loading && profile && profile.modo !== 'empresarial') {
@@ -94,6 +97,7 @@ export function FuncionariosPage() {
       toast.success('Funcionário cadastrado com sucesso! 👤');
       setModalOpen(false);
       setForm({ ...EMPTY_FORM });
+      setRefreshTrigger(prev => prev + 1);
     } catch (err) {
       console.error(err);
       toast.error('Erro ao salvar funcionário.');

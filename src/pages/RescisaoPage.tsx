@@ -28,39 +28,39 @@ interface Resultado { verbas: Verba[]; inss: number; totalBruto: number; totalLi
 function calcular(salario: number, admissao: Date, demissao: Date, tipo: TipoRescisao): Resultado {
   const diasTrabalhados = demissao.getDate();
   const mesesTotais = diffMonths(admissao, demissao);
-  const mesesNoAno = diffMonths(new Date(demissao.getFullYear(), 0, 1), demissao) || 1;
-  const mesesPeriodo = mesesTotais % 12 || 12;
+  const mesesNoAno = demissao.getMonth() + (demissao.getDate() >= 15 ? 1 : 0) || 1;
+  const mesesPeriodo = mesesTotais % 12;
   const temPeriodoAquisitivo = mesesTotais >= 12;
 
   const devAviso = tipo === 'Demissão Sem Justa Causa' || tipo === 'Acordo Trabalhista';
   const devFeriasProp = tipo !== 'Demissão Com Justa Causa';
   const devUmTercoProp = tipo !== 'Demissão Com Justa Causa';
   const dev13 = tipo !== 'Pedido de Demissão' && tipo !== 'Demissão Com Justa Causa';
-  const devMulta = tipo === 'Demissão Sem Justa Causa' || tipo === 'Acordo Trabalhista';
 
   const saldoSalario = (salario / 30) * diasTrabalhados;
-  const avisoPrevio = devAviso ? salario : 0;
+  const avisoPrevio = tipo === 'Demissão Sem Justa Causa' ? salario : (tipo === 'Acordo Trabalhista' ? salario * 0.5 : 0);
   const feriasVencidas = temPeriodoAquisitivo ? salario : 0;
   const feriasProp = devFeriasProp ? (salario / 12) * mesesPeriodo : 0;
   const umTerco = devUmTercoProp ? (feriasVencidas + feriasProp) * 0.3333 : 0;
   const trezeAvos = dev13 ? (salario / 12) * mesesNoAno : 0;
-  const fgtsDepositar = 0;
   const fgtsAcumulado = salario * 0.08 * mesesTotais;
-  const multaFGTS = devMulta ? fgtsAcumulado * 0.40 : 0;
+  const multaFGTS = tipo === 'Demissão Sem Justa Causa' ? fgtsAcumulado * 0.40 : (tipo === 'Acordo Trabalhista' ? fgtsAcumulado * 0.20 : 0);
+  const devMulta = tipo === 'Demissão Sem Justa Causa' || tipo === 'Acordo Trabalhista';
 
   const verbas: Verba[] = [
     { nome: 'Saldo de Salário', valor: saldoSalario, devida: true, tributavel: true },
     { nome: 'Aviso Prévio', valor: avisoPrevio, devida: devAviso, tributavel: true },
-    { nome: 'Férias Vencidas', valor: feriasVencidas, devida: temPeriodoAquisitivo, tributavel: true },
-    { nome: 'Férias Proporcionais', valor: feriasProp, devida: devFeriasProp, tributavel: true },
+    { nome: 'Férias Vencidas', valor: feriasVencidas, devida: temPeriodoAquisitivo, tributavel: false },
+    { nome: 'Férias Proporcionais', valor: feriasProp, devida: devFeriasProp, tributavel: false },
     { nome: '1/3 de Férias', valor: umTerco, devida: devUmTercoProp, tributavel: false },
     { nome: '13º Proporcional', valor: trezeAvos, devida: dev13, tributavel: true },
-    { nome: 'FGTS a Depositar', valor: fgtsDepositar, devida: true, tributavel: false },
-    { nome: 'Multa do FGTS (40%)', valor: multaFGTS, devida: devMulta, tributavel: false },
+    { nome: 'Multa do FGTS', valor: multaFGTS, devida: devMulta, tributavel: false },
   ];
 
-  const totalTributavel = verbas.filter(v => v.devida && v.tributavel).reduce((s, v) => s + v.valor, 0);
-  const inss = calcINSS(totalTributavel);
+  const totalTributavel = verbas
+    .filter(v => v.devida && v.tributavel)
+    .reduce((s, v) => s + v.valor, 0);
+  const inss = totalTributavel * 0.075;
   const totalBruto = verbas.filter(v => v.devida).reduce((s, v) => s + v.valor, 0);
   const totalLiquido = totalBruto - inss;
 
@@ -112,33 +112,34 @@ export function RescisaoPage() {
     setExporting(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const admissaoFmt = admissaoStr ? new Date(admissaoStr + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-      const demissaoFmt = dataDemissao ? new Date(dataDemissao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-      const receitas = resultado.verbas.filter(v => v.devida && v.valor > 0).reduce((s, v) => s + v.valor, 0);
+      const resultadoDaRescisao = {
+        funcionario: {
+          nome: funcionario.nome,
+          cargo: funcionario.cargo,
+          dataAdmissao: admissaoStr,
+          salarioBruto: salario
+        },
+        dataDemissao,
+        tipoRescisao,
+        verbas: resultado.verbas,
+        inss: resultado.inss,
+        totalBruto: resultado.totalBruto,
+        totalLiquido: resultado.totalLiquido
+      };
       const res = await fetch('/api/relatorio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          receitas: receitas.toFixed(2),
-          despesas: resultado.inss.toFixed(2),
-          balanco: resultado.totalLiquido.toFixed(2),
-          metas: [],
-          alertas: [
-            `Funcionário: ${funcionario.nome} (${funcionario.cargo})`,
-            `Tipo de Rescisão: ${tipoRescisao}`,
-            `Admissão: ${admissaoFmt} · Demissão: ${demissaoFmt}`,
-            `Total Bruto: ${fmt(resultado.totalBruto)} · INSS: ${fmt(resultado.inss)}`,
-            `Total Líquido a Pagar: ${fmt(resultado.totalLiquido)}`
-          ]
-        })
+        body: JSON.stringify({ tipo: 'rescisao', dados: resultadoDaRescisao })
       });
       if (!res.ok) throw new Error('Falha ao gerar PDF.');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `rescisao_${funcionario.nome.replace(/\s/g, '_')}.pdf`;
+      a.download = 'rescisao.pdf';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('PDF exportado com sucesso!');
     } catch (err) { console.error(err); toast.error('Erro ao gerar PDF.'); }
@@ -301,7 +302,7 @@ export function RescisaoPage() {
                   <thead>
                     <tr className="border-b border-gray-800 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                       <th className="px-6 lg:px-8 py-3">Verba Rescisória</th>
-                      <th className="px-4 py-3 text-center">Devida?</th>
+                      <th className="px-4 py-3 text-center">Situação</th>
                       <th className="px-6 lg:px-8 py-3 text-right">Valor</th>
                     </tr>
                   </thead>
@@ -310,10 +311,14 @@ export function RescisaoPage() {
                       <tr key={v.nome} className="hover:bg-gray-800/30 transition-colors">
                         <td className={`px-6 lg:px-8 py-3.5 text-sm font-medium ${v.devida ? 'text-gray-200' : 'text-gray-600'}`}>{v.nome}</td>
                         <td className="px-4 py-3.5 text-center">
-                          {v.devida
-                            ? <CheckCircle2 className="w-4 h-4 text-emerald-400 inline" />
-                            : <XIcon className="w-4 h-4 text-gray-600 inline" />}
-                        </td>
+                           <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                             v.devida
+                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                               : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                           }`}>
+                             {v.devida ? 'Devido' : 'Não Devido'}
+                           </span>
+                         </td>
                         <td className={`px-6 lg:px-8 py-3.5 text-sm font-bold text-right ${v.devida ? (v.valor > 0 ? 'text-emerald-400' : 'text-gray-500') : 'text-gray-600'}`}>
                           {v.devida ? fmt(v.valor) : '—'}
                         </td>
