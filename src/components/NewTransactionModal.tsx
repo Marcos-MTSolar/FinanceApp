@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebaseConfig';
-import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownLeft, Loader2, DollarSign, Calendar, Tag, FileText, CreditCard, Building } from 'lucide-react';
 import { applyXpEvent, verificarExcessoDespesasDia } from '../lib/gamification';
 import toast from 'react-hot-toast';
 
@@ -31,6 +31,9 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
   const [data, setData] = useState(() => new Date().toISOString().split('T')[0]);
   const [recorrente, setRecorrente] = useState(false);
   const [centroCusto, setCentroCusto] = useState('');
+  const [cartaoVinculado, setCartaoVinculado] = useState('');
+  const [dinheiroCarteira, setDinheiroCarteira] = useState<string | number>('');
+  const [bancoOrigem, setBancoOrigem] = useState('');
   const [centros, setCentros] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -52,6 +55,9 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
     setTipo('despesa');
     setRecorrente(false);
     setCentroCusto('');
+    setCartaoVinculado('');
+    setDinheiroCarteira('');
+    setBancoOrigem('');
     setError('');
     setLoading(false);
     onClose();
@@ -76,7 +82,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
       const [year, month, day] = data.split('-');
       const formattedDate = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0).toISOString();
 
-      await addDoc(collection(db, `transacoes/${userId}/items`), {
+      const dataToSave: any = {
         descricao: descricao.trim(),
         valor: Number(valor),
         tipo,
@@ -86,7 +92,13 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         modo,
         centroCusto: modo === 'empresarial' ? (centroCusto || '') : '',
         criadoEm: new Date().toISOString()
-      });
+      };
+
+      if (tipo === 'despesa' && cartaoVinculado) dataToSave.cartaoVinculado = cartaoVinculado;
+      if (dinheiroCarteira !== '') dataToSave.dinheiroCarteira = Number(dinheiroCarteira);
+      if (bancoOrigem) dataToSave.bancoOrigem = bancoOrigem;
+
+      await addDoc(collection(db, `transacoes/${userId}/items`), dataToSave);
 
       // XP: +10 apenas para receitas (catálogo: ADICIONAR_RECEITA)
       // Para despesas: verificar penalidade de excesso no dia
@@ -254,6 +266,71 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
               </select>
             </div>
           )}
+
+          {/* Seção Origem do Valor */}
+          <div className="space-y-4 pt-4 border-t border-gray-800/80">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Origem do Valor</h4>
+            
+            {tipo === 'despesa' && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Cartão de crédito vinculado (opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Nubank, Itaú Platinum"
+                  value={cartaoVinculado}
+                  onChange={(e) => setCartaoVinculado(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                <DollarSign className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Dinheiro disponível na carteira (R$) (opcional)</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={dinheiroCarteira}
+                onChange={(e) => setDinheiroCarteira(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
+                <Building className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Banco de origem (opcional)</span>
+              </label>
+              <input
+                type="text"
+                list="bancos-sugestoes"
+                placeholder="Ex: Nubank, Itaú..."
+                value={bancoOrigem}
+                onChange={(e) => setBancoOrigem(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+              />
+              <datalist id="bancos-sugestoes">
+                <option value="Nubank" />
+                <option value="Itaú" />
+                <option value="Bradesco" />
+                <option value="Santander" />
+                <option value="Caixa Econômica Federal" />
+                <option value="Banco do Brasil" />
+                <option value="Inter" />
+                <option value="C6 Bank" />
+                <option value="BTG Pactual" />
+                <option value="Sicoob" />
+                <option value="Outro" />
+              </datalist>
+            </div>
+          </div>
 
           {/* Campo Recorrente */}
           <div className="flex items-center gap-3 p-3.5 bg-gray-950 border border-gray-800 rounded-2xl">

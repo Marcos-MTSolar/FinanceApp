@@ -219,7 +219,7 @@ export function Transacoes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
+    <div className="h-screen overflow-hidden bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
       <div className="md:hidden flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -297,7 +297,7 @@ export function Transacoes() {
         />
       )}
 
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-950">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-950 h-full overflow-y-auto">
         <header className="h-20 px-6 lg:px-10 border-b border-gray-900 flex items-center justify-between bg-gray-950/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <h1 className="text-xl font-bold tracking-tight text-white">Transações</h1>

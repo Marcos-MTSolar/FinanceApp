@@ -183,7 +183,7 @@ export function ReservaTrabalhistaPage() {
   const inputCls = "w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col md:flex-row font-sans">
+    <div className="h-screen overflow-hidden bg-gray-950 text-white flex flex-col md:flex-row font-sans">
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function ReservaTrabalhistaPage() {
       </aside>
       {mobileMenuOpen && <div onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden" />}
 
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-950">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-950 h-full overflow-y-auto">
         <header className="h-20 px-6 lg:px-10 border-b border-gray-900 flex items-center justify-between bg-gray-950/80 backdrop-blur-md sticky top-0 z-20">
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2"><PiggyBank className="w-6 h-6 text-indigo-400" />Reserva Trabalhista</h1>
           <div className="flex items-center gap-3">
