@@ -529,6 +529,13 @@ Nesta seção, consolidamos as melhorias e correções arquiteturais documentada
 2. **Prevenção de Abuso de Cota de IA**: Implementação do middleware de controle de tráfego `aiLimiter` no Express, mitigando gastos excessivos de infraestrutura ao barrar acessos acima de 200 chamadas/hora em rotas da Groq.
 3. **Robustez na Extração de Extratos (Absolute Values)**: Ajuste fino no parser inteligente de PDFs para converter strings decimais complexas brasileiras (ex: 1.860,32 com sinal negativo `-`) em valores matemáticos float absolutos e positivos no campo de valor, ajustando a detecção e inserção de transações no banco de dados.
 4. **Isolamento de Credenciais Confidenciais**: Migração da chamada da plataforma Antigravity (que expunha a chave secreta diretamente no cliente do navegador) para uma rota proxy segura no backend (`/api/antigravity/action`), resguardando as chaves confidenciais apenas em variáveis de ambiente protegidas no servidor.
+5. **[2026-05-25] Auditoria BLOCO 1 — Correção dos Downloads de PDF**:
+   - **`server.ts` e `api/index.ts`**: Corrigido o header `Content-Disposition` na rota `/api/relatorio`. O nome do arquivo estava sem aspas obrigatórias conforme RFC 6266 (`filename=relatorio.pdf`) e foi ajustado para o formato correto com aspas e nome padronizado (`filename="relatorio-financeai.pdf"`).
+   - **`src/components/Dashboard.tsx`**: Adicionado `window.URL.revokeObjectURL(url)` após o clique no link de download do relatório PDF, prevenindo memory leak de objetos Blob no navegador.
+   - **`src/pages/DemonstrativosPage.tsx`**: Adicionado `window.URL.revokeObjectURL(url)` após o clique no link de download do PDF da DRE, prevenindo memory leak de objetos Blob no navegador.
+   - **`src/pages/RescisaoPage.tsx`**: Auditado — já estava correto com `URL.revokeObjectURL` e `document.body.removeChild(a)`. Nenhuma alteração necessária.
+   - **Backend — rota `/api/relatorio`**: Auditado — já possui `requireAuth`, headers `Content-Type: application/pdf` e `Content-Disposition` corretos (após correção), e `try/catch` com `res.status(500).json()`.
+   - **Frontend — todas as funções de download**: Auditado — token Firebase enviado via `Authorization: Bearer <token>` em todos os pontos. Blobs criados corretamente com tipo MIME adequado. Elemento `<a>` removido do DOM em todos os pontos. Toast de erro visível ao usuário via `react-hot-toast` presente em todos os pontos.
 
 ---
 > ⚠️ **ATENÇÃO**
@@ -589,3 +596,9 @@ Esses tokens e segredos são estritamente confidenciais e residem apenas no lado
 > ⚠️ **ATENÇÃO**
 > Nunca envie ou comite os arquivos `.env` ou arquivos contendo as chaves de serviço JSON do Firebase para repositórios públicos do GitHub/Gitlab, pois isso compromete totalmente as chaves confidenciais do servidor e permite fraudes.
 ---
+
+## 15. HISTÓRICO DE ALTERAÇÕES
+
+| Data/Hora | O que foi feito | Arquivos Modificados |
+|---|---|---|
+| 2026-05-25 12:25 (BRT) | **Auditoria BLOCO 1**: Corrigido header `Content-Disposition` (aspas RFC 6266) em ambos os servidores; adicionado `URL.revokeObjectURL` em Dashboard e DemonstrativosPage para prevenir memory leak; auditoria completa de todos os pontos de download do projeto confirmou conformidade de autenticação, MIME type, remoção de DOM e toast de erro. | `server.ts`, `api/index.ts`, `src/components/Dashboard.tsx`, `src/pages/DemonstrativosPage.tsx` |
