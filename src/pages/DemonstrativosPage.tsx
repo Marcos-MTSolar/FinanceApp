@@ -209,6 +209,7 @@ export function DemonstrativosPage() {
       a.download = `DRE_${competencia}.pdf`;
       document.body.appendChild(a);
       a.click();
+      window.URL.revokeObjectURL(url);
       a.remove();
       toast.success('Relatório DRE baixado! 📄', { id: 'pdf' });
     } catch (err) {

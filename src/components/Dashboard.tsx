@@ -343,6 +343,7 @@ export function Dashboard() {
       a.download = 'relatorio.pdf';
       document.body.appendChild(a);
       a.click();
+      window.URL.revokeObjectURL(url);
       a.remove();
     } catch(e) {
       console.error(e);
