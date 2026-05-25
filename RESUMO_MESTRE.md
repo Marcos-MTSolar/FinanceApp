@@ -544,6 +544,11 @@ Nesta seção, consolidamos as melhorias e correções arquiteturais documentada
 7. **[2026-05-25] Funcionalidade BLOCO 3 — Exclusão de Funcionário**:
    - **`FuncionariosPage.tsx`**: Implementada a deleção de funcionários diretamente no cliente Firebase via `deleteDoc` na coleção respectiva (`funcionarios/{userId}/items/{id}`). 
    - Adicionada interface inline de confirmação de exclusão nos cards da equipe (substituindo modais intrusivos como `window.confirm`), com ícone de `Trash2`, tratamento de estados de progresso (spinner durante deleção), atualização em tempo real do estado na tela (removendo o funcionário da renderização sem refresh da página), e notificações assíncronas via `react-hot-toast`.
+8. **[2026-05-25] Auditoria BLOCO 4 — Valores de Contratação PJ**:
+   - **`FuncionariosPage.tsx`**: O sistema calculava e somava incorretamente encargos trabalhistas (INSS Patronal de 20%, FGTS de 8%, RAT/SAT de 2%, Férias e 13º) para funcionários do tipo `PJ`. A lógica da função `calcularCustos` foi reescrita para aceitar o `tipoContrato`.
+   - Implementada a fórmula de retenção de impostos exclusiva para PJ: `Valor bruto do contrato = valor líquido desejado / (1 - (Simples Nacional 6% + ISS 5%))`, eliminando qualquer alíquota equivocada de 15,5% ou encargos de CLT.
+   - A aba "Custo Real" foi dinamicamente atualizada para exibir o demonstrativo de NF para PJ (Valor Líquido, Simples Nacional 6%, ISS 5% e Custo Total da Empresa).
+   - Confirmada a aplicação unificada do formatador Monetário `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })` para os valores de PJ.
 
 ---
 > ⚠️ **ATENÇÃO**
@@ -611,3 +616,4 @@ Esses tokens e segredos são estritamente confidenciais e residem apenas no lado
 |---|---|---|
 | 2026-05-25 12:25 (BRT) | **Auditoria BLOCO 1**: Corrigido header `Content-Disposition` (aspas RFC 6266) em ambos os servidores; adicionado `URL.revokeObjectURL` em Dashboard e DemonstrativosPage para prevenir memory leak; auditoria completa de todos os pontos de download do projeto confirmou conformidade de autenticação, MIME type, remoção de DOM e toast de erro. | `server.ts`, `api/index.ts`, `src/components/Dashboard.tsx`, `src/pages/DemonstrativosPage.tsx` |
 | 2026-05-25 12:35 (BRT) | **Auditoria BLOCO 2 e Feature BLOCO 3**: Auditoria Firebase concluída, `firestore.rules` atualizado para proteger a coleção `funcionarios`. Implementada a exclusão de funcionário no Frontend (`FuncionariosPage.tsx`) com interface de confirmação inline, chamadas `deleteDoc` assíncronas e notificações `react-hot-toast`. | `firestore.rules`, `src/pages/FuncionariosPage.tsx`, `RESUMO_MESTRE.md` |
+| 2026-05-25 12:40 (BRT) | **Auditoria BLOCO 4**: Corrigidos cálculos de custos reais para contratações PJ. Encargos CLT (INSS Patronal, FGTS, etc) foram removidos e substituídos pela fórmula de Valor Bruto usando alíquotas fixas (Simples 6% e ISS 5%). Tabelas visuais adaptadas para exibir o desdobramento da NFS-e. | `src/pages/FuncionariosPage.tsx`, `RESUMO_MESTRE.md` |
