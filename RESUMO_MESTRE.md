@@ -536,6 +536,14 @@ Nesta seção, consolidamos as melhorias e correções arquiteturais documentada
    - **`src/pages/RescisaoPage.tsx`**: Auditado — já estava correto com `URL.revokeObjectURL` e `document.body.removeChild(a)`. Nenhuma alteração necessária.
    - **Backend — rota `/api/relatorio`**: Auditado — já possui `requireAuth`, headers `Content-Type: application/pdf` e `Content-Disposition` corretos (após correção), e `try/catch` com `res.status(500).json()`.
    - **Frontend — todas as funções de download**: Auditado — token Firebase enviado via `Authorization: Bearer <token>` em todos os pontos. Blobs criados corretamente com tipo MIME adequado. Elemento `<a>` removido do DOM em todos os pontos. Toast de erro visível ao usuário via `react-hot-toast` presente em todos os pontos.
+6. **[2026-05-25] Auditoria BLOCO 2 — Integração com Firebase**:
+   - Mapeadas todas as operações de leitura e escrita nas coleções (`users`, `transacoes`, `metas`, `chats`, `rendaExtra`, `diagnostico`). 
+   - Confirmado que todas as requisições estão passando o `userId` dinâmico originado pelo hook `useAuth`/`auth.currentUser` — não há IDs hardcoded.
+   - Confirmado que os campos e tipos escritos correspondem rigorosamente ao esquema (ex: `valorAlvo` para metas).
+   - **Correção em `firestore.rules`**: Identificado que a coleção `funcionarios/{userId}/items` estava sendo manipulada sem a devida blindagem de segurança no servidor do Firebase. Uma nova regra (`allow read, write: if request.auth != null && request.auth.uid == userId;`) foi criada para proteger a entidade, isolando os tenants da empresa.
+7. **[2026-05-25] Funcionalidade BLOCO 3 — Exclusão de Funcionário**:
+   - **`FuncionariosPage.tsx`**: Implementada a deleção de funcionários diretamente no cliente Firebase via `deleteDoc` na coleção respectiva (`funcionarios/{userId}/items/{id}`). 
+   - Adicionada interface inline de confirmação de exclusão nos cards da equipe (substituindo modais intrusivos como `window.confirm`), com ícone de `Trash2`, tratamento de estados de progresso (spinner durante deleção), atualização em tempo real do estado na tela (removendo o funcionário da renderização sem refresh da página), e notificações assíncronas via `react-hot-toast`.
 
 ---
 > ⚠️ **ATENÇÃO**
@@ -602,3 +610,4 @@ Esses tokens e segredos são estritamente confidenciais e residem apenas no lado
 | Data/Hora | O que foi feito | Arquivos Modificados |
 |---|---|---|
 | 2026-05-25 12:25 (BRT) | **Auditoria BLOCO 1**: Corrigido header `Content-Disposition` (aspas RFC 6266) em ambos os servidores; adicionado `URL.revokeObjectURL` em Dashboard e DemonstrativosPage para prevenir memory leak; auditoria completa de todos os pontos de download do projeto confirmou conformidade de autenticação, MIME type, remoção de DOM e toast de erro. | `server.ts`, `api/index.ts`, `src/components/Dashboard.tsx`, `src/pages/DemonstrativosPage.tsx` |
+| 2026-05-25 12:35 (BRT) | **Auditoria BLOCO 2 e Feature BLOCO 3**: Auditoria Firebase concluída, `firestore.rules` atualizado para proteger a coleção `funcionarios`. Implementada a exclusão de funcionário no Frontend (`FuncionariosPage.tsx`) com interface de confirmação inline, chamadas `deleteDoc` assíncronas e notificações `react-hot-toast`. | `firestore.rules`, `src/pages/FuncionariosPage.tsx`, `RESUMO_MESTRE.md` |

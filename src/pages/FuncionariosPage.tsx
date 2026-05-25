@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import { Activity, Briefcase, Building, Calculator, CheckSquare, CreditCard, FileText, LayoutDashboard, Loader2, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Save, Scale, Shield, Tag, Target, TrendingUp, Trophy, Upload, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, Briefcase, Building, Calculator, CheckSquare, CreditCard, FileText, LayoutDashboard, Loader2, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Save, Scale, Shield, Tag, Target, Trash2, TrendingUp, Trophy, Upload, Users, X, XCircle } from 'lucide-react';
 
 interface Funcionario {
   id: string;
@@ -50,6 +50,8 @@ export function FuncionariosPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => setUser(u));
@@ -102,6 +104,22 @@ export function FuncionariosPage() {
       console.error(err);
       toast.error('Erro ao salvar funcionário.');
     } finally { setSaving(false); }
+  };
+
+  const handleDeleteFuncionario = async (id: string) => {
+    if (!user?.uid) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, `funcionarios/${user.uid}/items`, id));
+      setFuncionarios(prev => prev.filter(f => f.id !== id));
+      toast.success('Funcionário excluído com sucesso.');
+      setConfirmDeleteId(null);
+    } catch (err) {
+      console.error('[FuncionariosPage] Erro ao excluir funcionário:', err);
+      toast.error('Erro ao excluir funcionário. Tente novamente.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleLogout = async () => { try { await signOut(auth); navigate('/login'); } catch { navigate('/login'); } };
@@ -242,25 +260,64 @@ export function FuncionariosPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                   {funcionarios.map(f => (
-                    <div key={f.id} className="bg-gray-900 border border-gray-800 hover:border-indigo-500/40 rounded-3xl p-6 shadow-xl transition-all group">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-sm font-bold text-white shadow-inner">
-                          {f.nome.substring(0, 2).toUpperCase()}
+                    <div key={f.id} className="bg-gray-900 border border-gray-800 hover:border-indigo-500/40 rounded-3xl p-6 shadow-xl transition-all group relative overflow-hidden">
+
+                      {/* Painel de confirmação de exclusão inline */}
+                      {confirmDeleteId === f.id ? (
+                        <div className="flex flex-col items-center justify-center gap-4 py-4 animate-in fade-in duration-200">
+                          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                            <AlertTriangle className="w-6 h-6 text-rose-400" />
+                          </div>
+                          <p className="text-sm font-bold text-white text-center">Tem certeza que deseja excluir este funcionário?</p>
+                          <p className="text-xs text-gray-400 text-center leading-relaxed">Esta ação não pode ser desfeita.</p>
+                          <div className="flex gap-3 w-full pt-1">
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              disabled={deleting}
+                              className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm font-bold rounded-2xl transition-all disabled:opacity-50"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteFuncionario(f.id)}
+                              disabled={deleting}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-2xl shadow-lg shadow-rose-600/20 transition-all disabled:opacity-70"
+                            >
+                              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              {deleting ? 'Excluindo...' : 'Excluir'}
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-white leading-tight">{f.nome}</p>
-                          <p className="text-xs text-indigo-400 font-medium">{f.cargo}</p>
-                        </div>
-                        <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-violet-500/10 text-violet-400 border-violet-500/20">{f.tipoContrato}</span>
-                      </div>
-                      <div className="space-y-2 text-xs text-gray-400">
-                        <div className="flex justify-between"><span>CPF</span><span className="text-gray-300 font-medium font-mono">{f.cpf}</span></div>
-                        <div className="flex justify-between"><span>Admissão</span><span className="text-gray-300 font-medium">{f.dataAdmissao ? new Date(f.dataAdmissao + 'T12:00:00').toLocaleDateString('pt-BR') : '--'}</span></div>
-                        <div className="flex justify-between border-t border-gray-800 pt-2 mt-2">
-                          <span className="font-bold text-gray-300">Salário Bruto</span>
-                          <span className="text-emerald-400 font-extrabold">{fmt(f.salarioBruto || 0)}</span>
-                        </div>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-sm font-bold text-white shadow-inner">
+                              {f.nome.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-white leading-tight">{f.nome}</p>
+                              <p className="text-xs text-indigo-400 font-medium">{f.cargo}</p>
+                            </div>
+                            <span className="ml-auto text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-violet-500/10 text-violet-400 border-violet-500/20">{f.tipoContrato}</span>
+                          </div>
+                          <div className="space-y-2 text-xs text-gray-400">
+                            <div className="flex justify-between"><span>CPF</span><span className="text-gray-300 font-medium font-mono">{f.cpf}</span></div>
+                            <div className="flex justify-between"><span>Admissão</span><span className="text-gray-300 font-medium">{f.dataAdmissao ? new Date(f.dataAdmissao + 'T12:00:00').toLocaleDateString('pt-BR') : '--'}</span></div>
+                            <div className="flex justify-between items-center border-t border-gray-800 pt-2 mt-2">
+                              <span className="font-bold text-gray-300">Salário Bruto</span>
+                              <span className="text-emerald-400 font-extrabold">{fmt(f.salarioBruto || 0)}</span>
+                            </div>
+                          </div>
+                          {/* Botão de exclusão — visível no hover do card */}
+                          <button
+                            onClick={() => setConfirmDeleteId(f.id)}
+                            title="Excluir funcionário"
+                            className="absolute top-4 right-4 p-2 text-gray-600 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
