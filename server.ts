@@ -90,15 +90,18 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // API Route for Relatório PDF
   app.post('/api/relatorio', requireAuth, async (req, res) => {
+    if (!req.user?.uid) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
     try {
       const data = req.body;
       const stream = await generatePdfStream(data);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="relatorio-financeai.pdf"');
       stream.pipe(res);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Erro gerando relatorio' });
+    } catch (error) {
+      console.error('[/api/relatorio] Erro ao gerar PDF:', error);
+      res.status(500).json({ error: 'Erro interno ao gerar PDF', detalhe: String(error) });
     }
   });
 

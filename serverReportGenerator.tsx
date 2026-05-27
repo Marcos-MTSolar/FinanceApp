@@ -12,57 +12,68 @@ const styles = StyleSheet.create({
   card: { padding: 10, backgroundColor: '#f3f4f6', borderRadius: 5, width: '30%' },
 });
 
-const ReportPDF = ({ data }: { data: any }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <Text style={styles.header}>Relatório Inteligente - FinanceAI</Text>
-      
-      <View style={styles.grid}>
-        <View style={styles.card}>
-          <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Receitas</Text>
-          <Text style={{ fontSize: 14, color: '#10b981', fontWeight: 'bold' }}>R$ {data.receitas}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Despesas</Text>
-          <Text style={{ fontSize: 14, color: '#ef4444', fontWeight: 'bold' }}>R$ {data.despesas}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={{ fontSize: 10, color: '#6b7280' }}>Balanço do Mês</Text>
-          <Text style={{ fontSize: 14, color: '#4f46e5', fontWeight: 'bold' }}>R$ {data.balanco}</Text>
-        </View>
-      </View>
+const ReportPDF = ({ data }: { data: any }) => {
+  const safeData = data || {};
+  const metas = safeData.metas || [];
+  const alertas = safeData.alertas || [];
 
-      <View style={styles.section}>
-        <Text style={styles.title}>Metas Alcançadas</Text>
-        {data.metas && data.metas.length > 0 ? (
-          data.metas.map((m: any, i: number) => (
-            <Text key={i} style={styles.text}>- {m.titulo}: Concluido em {m.concluidoEm || 'Breve'}</Text>
-          ))
-        ) : (
-          <Text style={styles.text}>Nenhuma meta concluida neste periodo.</Text>
-        )}
-      </View>
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.header}>Relatório Inteligente - FinanceAI</Text>
+        
+        <View style={styles.grid}>
+          <View style={styles.card}>
+            <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Receitas</Text>
+            <Text style={{ fontSize: 14, color: '#10b981', fontWeight: 'bold' }}>R$ {safeData.receitas || '0.00'}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Despesas</Text>
+            <Text style={{ fontSize: 14, color: '#ef4444', fontWeight: 'bold' }}>R$ {safeData.despesas || '0.00'}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={{ fontSize: 10, color: '#6b7280' }}>Balanço do Mês</Text>
+            <Text style={{ fontSize: 14, color: '#4f46e5', fontWeight: 'bold' }}>R$ {safeData.balanco || '0.00'}</Text>
+          </View>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.title}>Alertas da IA</Text>
-        {data.alertas && data.alertas.length > 0 ? (
-          data.alertas.map((a: string, i: number) => (
-            <Text key={i} style={styles.alertItem}>* {a}</Text>
-          ))
-        ) : (
-          <Text style={styles.text}>Tudo sob controle! Nenhum alerta grave.</Text>
-        )}
-      </View>
-      
-      <Text style={{ fontSize: 10, textAlign: 'center', marginTop: 20, color: '#9ca3af' }}>
-        Gerado via FinanceAI Pro
-      </Text>
-    </Page>
-  </Document>
-);
+        <View style={styles.section}>
+          <Text style={styles.title}>Metas Alcançadas</Text>
+          {metas.length > 0 ? (
+            metas.map((m: any, i: number) => (
+              <Text key={i} style={styles.text}>- {m.titulo}: Concluido em {m.concluidoEm || 'Breve'}</Text>
+            ))
+          ) : (
+            <Text style={styles.text}>Nenhuma meta concluida neste periodo.</Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.title}>Alertas da IA</Text>
+          {alertas.length > 0 ? (
+            alertas.map((a: string, i: number) => (
+              <Text key={i} style={styles.alertItem}>* {a}</Text>
+            ))
+          ) : (
+            <Text style={styles.text}>Tudo sob controle! Nenhum alerta grave.</Text>
+          )}
+        </View>
+        
+        <Text style={{ fontSize: 10, textAlign: 'center', marginTop: 20, color: '#9ca3af' }}>
+          Gerado via FinanceAI Pro
+        </Text>
+      </Page>
+    </Document>
+  );
+};
 
 export async function generatePdfStream(data: any) {
   // @ts-ignore
   const renderToStream = ReactPDF.renderToStream || ReactPDF.default.renderToStream;
+  
+  // Garantia de robustez e tratamento contra falhas silenciosas na busca de subcoleções do Firestore:
+  // const transacoes = snapshot.docs.map(d => d.data()) || [];
+  // const metas = metasSnapshot.docs.map(d => d.data()) || [];
+  
   return await renderToStream(<ReportPDF data={data} />);
 }
