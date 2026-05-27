@@ -58,6 +58,7 @@ import { IndicadoresPage } from './pages/IndicadoresPage';
 import { DemonstrativosPage } from './pages/DemonstrativosPage';
 import { PlanoContasPage } from './pages/PlanoContasPage';
 import { ConciliacaoPage } from './pages/ConciliacaoPage';
+import { InvestimentosPage } from './pages/InvestimentosPage';
 
 export default function App() {
   return (
@@ -164,6 +165,14 @@ export default function App() {
               <Route path="/empresa/demonstrativos" element={<ProtectedRoute><DemonstrativosPage /></ProtectedRoute>} />
               <Route path="/empresa/plano-contas" element={<ProtectedRoute><PlanoContasPage /></ProtectedRoute>} />
               <Route path="/empresa/conciliacao" element={<ProtectedRoute><ConciliacaoPage /></ProtectedRoute>} />
+              <Route
+                path="/investimentos"
+                element={
+                  <ProtectedRoute>
+                    <InvestimentosPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
             <FinanceChat />

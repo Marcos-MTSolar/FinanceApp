@@ -320,11 +320,11 @@ export function Dashboard() {
 
       const auth = getAuth();
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch('/api/relatorio', {
+      const response = await fetch('/api/relatorio', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           receitas: receitasPDF.toFixed(2),
@@ -334,17 +334,17 @@ export function Dashboard() {
           alertas: alertasFlash
         })
       });
-      if (!res.ok) throw new Error('Falha ao gerar');
+      if (!response.ok) throw new Error('Falha ao gerar');
       
-      const blob = await res.blob();
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'relatorio.pdf';
+      a.download = 'relatorio-financeai.pdf';
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      a.remove();
     } catch(e) {
       console.error(e);
       toast.error('Erro ao baixar PDF. Tente novamente.');

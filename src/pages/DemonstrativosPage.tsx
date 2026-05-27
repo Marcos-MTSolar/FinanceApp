@@ -167,8 +167,8 @@ export function DemonstrativosPage() {
   const handleExportarPDF = async () => {
     if (!user) return;
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) return;
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
 
       const payload = {
         receitas: currentDRE.receitaBruta.toFixed(2),
@@ -194,8 +194,8 @@ export function DemonstrativosPage() {
       const response = await fetch('/api/relatorio', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
@@ -206,11 +206,11 @@ export function DemonstrativosPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `DRE_${competencia}.pdf`;
+      a.download = 'relatorio-financeai.pdf';
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      a.remove();
       toast.success('Relatório DRE baixado! 📄', { id: 'pdf' });
     } catch (err) {
       console.error(err);

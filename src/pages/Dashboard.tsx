@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -11,7 +11,7 @@ import { ScoreGauge, AlertasInteligentes, CashFlowChart, MetasAtivasResumo } fro
 import { NewTransactionModal } from '../components/NewTransactionModal';
 import { AlertasEmpresariais } from '../components/AlertasEmpresariais';
 import { NotificacoesDropdown, criarNotificacao } from '../components/NotificacoesDropdown';
-import { Activity, ArrowDownLeft, ArrowUpRight, Bell, Briefcase, CheckSquare, CreditCard, FileText, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Scale, Search, Shield, Tag, Target, TrendingDown, TrendingUp, Trophy, Upload, User, Users, Wallet, X } from 'lucide-react';
+import { Activity, ArrowDownLeft, ArrowUpRight, BarChart2, Bell, Briefcase, CheckSquare, CreditCard, FileText, LayoutDashboard, LogOut, Menu, MessageCircle, Network, Percent, PiggyBank, Plus, Scale, Search, Shield, Tag, Target, TrendingDown, TrendingUp, Trophy, Upload, User, Users, Wallet, X } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -319,13 +319,14 @@ export function Dashboard() {
   );
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
-    { name: 'Metas', path: '/metas', icon: Target },
-    { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
-    { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
-    { name: 'Níveis', path: '/niveis', icon: Trophy },
+    { name: 'Dashboard',     path: '/dashboard',     icon: LayoutDashboard },
+    { name: 'Transações',    path: '/transacoes',    icon: CreditCard },
+    { name: 'Importar',      path: '/importar',      icon: Upload },
+    { name: 'Metas',         path: '/metas',         icon: Target },
+    { name: 'Renda Extra',   path: '/renda-extra',   icon: TrendingUp },
+    { name: 'Investimentos', path: '/investimentos', icon: BarChart2 },
+    { name: 'Assistente IA', path: '/chat',          icon: MessageCircle },
+    { name: 'Níveis',        path: '/niveis',        icon: Trophy },
   ];
 
   const userProfile = profile;
@@ -362,7 +363,7 @@ export function Dashboard() {
       </div>
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-gray-900 border-r border-gray-800 flex flex-col overflow-y-auto h-full transition-transform duration-300 ease-in-out md:translate-x-0 ${
           mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >

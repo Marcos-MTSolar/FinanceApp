@@ -45,5 +45,9 @@ service cloud.firestore {
     match /funcionarios/{userId}/items/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /investimentos/{userId}/items/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

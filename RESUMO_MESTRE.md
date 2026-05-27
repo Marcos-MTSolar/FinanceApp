@@ -103,6 +103,7 @@ financeai/
     │   │   ├── ChatPage.tsx         # Interface completa de chat em tempo real por streaming (SSE)
     │   │   ├── Dashboard.tsx        # Central administrativa com resumos de despesas, receitas e progresso
     │   │   ├── ImportPage.tsx       # Módulo de importação e processamento de arquivos de extrato via IA
+    │   │   ├── InvestimentosPage.tsx # Módulo de carteira de investimentos com XP gamificado
     │   │   ├── Login.tsx            # Tela moderna de Autenticação (Login e Cadastro com Firebase)
     │   │   ├── MetasPage.tsx        # Módulo de gerenciamento de objetivos com sugestões dinâmicas da IA
     │   │   ├── NiveisPage.tsx       # Tabela interativa detalhando todas as regras e conquistas de XP
@@ -321,6 +322,15 @@ Registros auxiliares de entradas monetárias:
 #### 6. Documento Único: `diagnostico/{userId}`
 Respostas consolidadas e score obtido no questionário inicial:
 - Armazena as variáveis enviadas na etapa de Onboarding (renda, dívidas, reserva, poupança) mais o `score` final atribuído e o array de `recomendacoes` gerado pelo Groq Llama.
+
+#### 7. Subcoleção: `investimentos/{userId}/items/{docId}`
+Carteira de ativos financeiros do usuário:
+- `tipo` (string): Classe do ativo (`Ações`, `FII`, `Tesouro IPCA+`, `Tesouro Selic`, `CDB`, `LCI/LCA`, `Cripto`, `Outro`).
+- `ticker` (string): Código ou nome do ativo em maiúsculas (ex: `PETR4`, `MXRF11`, `BTC`).
+- `quantidade` (number): Quantidade de unidades/cotas adquiridas.
+- `precoMedio` (number): Preço médio de compra por unidade.
+- `dataCompra` (string `YYYY-MM-DD`): Data da compra.
+- `criadoEm` (string ISO): Timestamp de criação do registro.
 
 ### Relacionamentos e Isolamento de Dados (Multitenancy)
 Sendo um banco de dados NoSQL baseado em documentos, o Firestore não aplica chaves estrangeiras rígidas relacionais. Em contrapartida, adota um modelo hierárquico aninhado por subcoleções dinâmicas estruturadas diretamente sob a chave identificadora `userId`.
@@ -621,3 +631,6 @@ Esses tokens e segredos são estritamente confidenciais e residem apenas no lado
 | 2026-05-25 12:35 (BRT) | **Auditoria BLOCO 2 e Feature BLOCO 3**: Auditoria Firebase concluída, `firestore.rules` atualizado para proteger a coleção `funcionarios`. Implementada a exclusão de funcionário no Frontend (`FuncionariosPage.tsx`) com interface de confirmação inline, chamadas `deleteDoc` assíncronas e notificações `react-hot-toast`. | `firestore.rules`, `src/pages/FuncionariosPage.tsx`, `RESUMO_MESTRE.md` |
 | 2026-05-25 12:40 (BRT) | **Auditoria BLOCO 4**: Corrigidos cálculos de custos reais para contratações PJ. Encargos CLT (INSS Patronal, FGTS, etc) foram removidos e substituídos pela fórmula de Valor Bruto usando alíquotas fixas (Simples 6% e ISS 5%). Tabelas visuais adaptadas para exibir o desdobramento da NFS-e. | `src/pages/FuncionariosPage.tsx`, `RESUMO_MESTRE.md` |
 | 2026-05-25 12:59 (BRT) | **Feature BLOCO 1 e 2**: Implementado Scroll Independente global com Tailwind (h-screen root, aside e main h-full com overflow-y-auto, modificação global no `index.css`). Inserida Seção Origem do Valor (`cartaoVinculado`, `dinheiroCarteira`, `bancoOrigem`) no Modal de Transações com datalist nativo. | `index.css`, `fix_layout.cjs` (TODAS páginas refatoradas), `src/components/NewTransactionModal.tsx` |
+| 2026-05-27 10:07 (BRT) | **PROMPT 1 — Página de Investimentos**: Criada `InvestimentosPage.tsx` com formulário de cadastro de ativos (tipo, ticker, quantidade, precoMedio, dataCompra), tabela de ativos com exclusão, card de resumo (total investido, distribuição por tipo), persistência no Firestore em `investimentos/{userId}/items`, XP de +20 ao adicionar o primeiro ativo. Rota `/investimentos` registrada no `App.tsx` com `ProtectedRoute`. Item "Investimentos" com ícone `BarChart2` adicionado ao menu lateral do `Dashboard.tsx`. | `src/pages/InvestimentosPage.tsx` (NOVO), `src/App.tsx`, `src/pages/Dashboard.tsx`, `firestore.rules` |
+| 2026-05-27 10:07 (BRT) | **PROMPT 2 — Scroll lateral independente da sidebar**: Adicionadas classes `overflow-y-auto` e `h-full` ao elemento `<aside>` do `Dashboard.tsx`. O container raiz já possuía `h-screen overflow-hidden flex` e o `<main>` já tinha `overflow-y-auto h-full`, completando o layout de scroll independente. | `src/pages/Dashboard.tsx` |
+| 2026-05-27 10:12 (BRT) | **PROMPT 3 — Correção de Download de PDF**: Padronizados todos os downloads de PDF no ecossistema FinanceAI. Corrigidas as chamadas de fetch para `/api/relatorio` usando a assinatura Bearer Token correta e o formato de payload exigido, além de otimizar a criação e o clique assíncrono nos elementos `a` do DOM (incluindo append, click, remove e revoke de URL) para garantir downloads sem vazamento de memória e consistentes com o nome `relatorio-financeai.pdf`. | `src/pages/RescisaoPage.tsx`, `src/pages/DemonstrativosPage.tsx`, `src/components/Dashboard.tsx` |

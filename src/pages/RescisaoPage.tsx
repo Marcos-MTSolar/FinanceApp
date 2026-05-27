@@ -126,21 +126,24 @@ export function RescisaoPage() {
         totalBruto: resultado.totalBruto,
         totalLiquido: resultado.totalLiquido
       };
-      const res = await fetch('/api/relatorio', {
+      const response = await fetch('/api/relatorio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ tipo: 'rescisao', dados: resultadoDaRescisao })
       });
-      if (!res.ok) throw new Error('Falha ao gerar PDF.');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      if (!response.ok) throw new Error('Falha ao gerar PDF.');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'rescisao.pdf';
+      a.download = 'relatorio-financeai.pdf';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
       toast.success('PDF exportado com sucesso!');
     } catch (err) { console.error(err); toast.error('Erro ao gerar PDF.'); }
     finally { setExporting(false); }
