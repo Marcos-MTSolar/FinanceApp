@@ -98,7 +98,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     }
     try {
       const data = req.body;
-      const { generatePdfStream } = await import('../serverReportGenerator.js');
+      const { generatePdfStream } = await import('./serverReportGenerator.js');
       const stream = await generatePdfStream(data);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="relatorio-financeai.pdf"');

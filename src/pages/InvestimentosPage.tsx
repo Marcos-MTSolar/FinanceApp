@@ -120,14 +120,18 @@ export function InvestimentosPage() {
       });
 
       // Deduz o valor investido do saldo registrando como despesa do tipo "Investimento"
-      await addDoc(collection(db, 'transacoes', userId, 'items'), {
-        descricao: `Investimento: ${ticker.toUpperCase()}`,
-        valor: Number(quantidade) * Number(precoMedio),
-        tipo: 'despesa',
-        categoria: 'Investimento',
-        data: Timestamp.fromDate(new Date(dataCompra)),
-        criadoEm: Timestamp.now()
-      });
+      try {
+        await addDoc(collection(db, 'transacoes', userId, 'items'), {
+          descricao: `Investimento: ${ticker.toUpperCase()}`,
+          valor: Number(quantidade) * Number(precoMedio),
+          tipo: 'despesa',
+          categoria: 'Investimento',
+          data: Timestamp.fromDate(new Date(dataCompra)),
+          criadoEm: Timestamp.now()
+        });
+      } catch (e) {
+        console.error('[Investimentos] Erro ao registrar transação:', e);
+      }
 
       if (primeiroAtivo) {
         // +20 XP ao cadastrar o primeiro ativo
