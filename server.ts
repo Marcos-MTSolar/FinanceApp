@@ -12,7 +12,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import multer from 'multer';
-import { generatePdfStream } from './serverReportGenerator';
+import { generatePdfStream } from './api/serverReportGenerator';
 
 declare global {
   namespace Express {
