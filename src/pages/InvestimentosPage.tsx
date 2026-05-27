@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, Timestamp } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
@@ -117,6 +117,16 @@ export function InvestimentosPage() {
         precoMedio: Number(precoMedio),
         dataCompra,
         criadoEm: new Date().toISOString(),
+      });
+
+      // Deduz o valor investido do saldo registrando como despesa do tipo "Investimento"
+      await addDoc(collection(db, 'transacoes', userId, 'items'), {
+        descricao: `Investimento: ${ticker.toUpperCase()}`,
+        valor: Number(quantidade) * Number(precoMedio),
+        tipo: 'despesa',
+        categoria: 'Investimento',
+        data: Timestamp.fromDate(new Date(dataCompra)),
+        criadoEm: Timestamp.now()
       });
 
       if (primeiroAtivo) {
@@ -423,13 +433,13 @@ export function InvestimentosPage() {
                 <table className="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr className="border-b border-gray-800 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                      <th className="pb-3 pl-2">Tipo</th>
-                      <th className="pb-3">Ticker</th>
-                      <th className="pb-3 text-right">Quantidade</th>
-                      <th className="pb-3 text-right">Preço Médio</th>
-                      <th className="pb-3 text-right">Valor Total</th>
-                      <th className="pb-3">Data Compra</th>
-                      <th className="pb-3 text-center">Ação</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3 pl-2">Tipo</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3">Ticker</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3 text-right">Quantidade</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3 text-right">Preço Médio</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3 text-right">Valor Total</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3">Data Compra</th>
+                      <th className="px-4 py-3 whitespace-nowrap pb-3 text-center">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/60 text-sm font-medium text-gray-200">
@@ -449,10 +459,10 @@ export function InvestimentosPage() {
                         <td className="py-4 text-right text-gray-300">
                           {formatCurrency(ativo.precoMedio)}
                         </td>
-                        <td className="py-4 text-right font-bold text-emerald-400">
+                        <td className="px-4 py-3 whitespace-nowrap text-right font-bold text-emerald-400">
                           {formatCurrency(ativo.quantidade * ativo.precoMedio)}
                         </td>
-                        <td className="py-4 text-gray-400 text-xs">
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
                           {formatDate(ativo.dataCompra)}
                         </td>
                         <td className="py-4 text-center">

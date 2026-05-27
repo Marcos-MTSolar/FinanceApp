@@ -68,12 +68,24 @@ const ReportPDF = ({ data }: { data: any }) => {
 };
 
 export async function generatePdfStream(data: any) {
-  // @ts-ignore
-  const renderToStream = ReactPDF.renderToStream || ReactPDF.default.renderToStream;
-  
-  // Garantia de robustez e tratamento contra falhas silenciosas na busca de subcoleções do Firestore:
-  // const transacoes = snapshot.docs.map(d => d.data()) || [];
-  // const metas = metasSnapshot.docs.map(d => d.data()) || [];
-  
-  return await renderToStream(<ReportPDF data={data} />);
+  try {
+    const dados = data || {};
+    const transacoes = dados.transacoes ?? [];
+    const metas = dados.metas ?? [];
+    const funcionarios = dados.funcionarios ?? [];
+    const receitas = dados.receitas ?? 0;
+    const despesas = dados.despesas ?? 0;
+
+    // @ts-ignore
+    const renderToStream = ReactPDF.renderToStream || ReactPDF.default.renderToStream;
+    
+    // Garantia de robustez e tratamento contra falhas silenciosas na busca de subcoleções do Firestore:
+    // const transacoes = snapshot.docs.map(d => d.data()) || [];
+    // const metas = metasSnapshot.docs.map(d => d.data()) || [];
+    
+    return await renderToStream(<ReportPDF data={{ ...dados, transacoes, metas, funcionarios, receitas, despesas }} />);
+  } catch (err) {
+    console.error('[serverReportGenerator] Falha ao renderizar PDF:', err);
+    throw err;
+  }
 }

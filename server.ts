@@ -100,8 +100,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       res.setHeader('Content-Disposition', 'attachment; filename="relatorio-financeai.pdf"');
       stream.pipe(res);
     } catch (error) {
-      console.error('[/api/relatorio] Erro ao gerar PDF:', error);
-      res.status(500).json({ error: 'Erro interno ao gerar PDF', detalhe: String(error) });
+      console.error('[/api/relatorio] Erro:', error);
+      return res.status(500).json({ 
+        error: 'Falha ao gerar PDF', 
+        detalhe: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
