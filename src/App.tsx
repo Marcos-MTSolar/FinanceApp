@@ -59,6 +59,14 @@ import { DemonstrativosPage } from './pages/DemonstrativosPage';
 import { PlanoContasPage } from './pages/PlanoContasPage';
 import { ConciliacaoPage } from './pages/ConciliacaoPage';
 import { InvestimentosPage } from './pages/InvestimentosPage';
+import { useAuth } from './hooks/useAuth';
+
+function InvestimentosRoute() {
+  const { profile: userProfile } = useAuth();
+  return userProfile?.modo === 'empresarial'
+    ? <Navigate to="/dashboard" replace />
+    : <InvestimentosPage />;
+}
 
 export default function App() {
   return (
@@ -169,7 +177,7 @@ export default function App() {
                 path="/investimentos"
                 element={
                   <ProtectedRoute>
-                    <InvestimentosPage />
+                    <InvestimentosRoute />
                   </ProtectedRoute>
                 }
               />

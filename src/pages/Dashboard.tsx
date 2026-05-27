@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, doc, setDoc, getDoc, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -318,18 +318,17 @@ export function Dashboard() {
     rendasExtrasMes.length
   );
 
+  const userProfile = profile;
   const navItems = [
     { name: 'Dashboard',     path: '/dashboard',     icon: LayoutDashboard },
     { name: 'Transações',    path: '/transacoes',    icon: CreditCard },
     { name: 'Importar',      path: '/importar',      icon: Upload },
     { name: 'Metas',         path: '/metas',         icon: Target },
     { name: 'Renda Extra',   path: '/renda-extra',   icon: TrendingUp },
-    { name: 'Investimentos', path: '/investimentos', icon: BarChart2 },
+    ...(userProfile?.modo !== 'empresarial' ? [{ name: 'Investimentos', path: '/investimentos', icon: BarChart2 }] : []),
     { name: 'Assistente IA', path: '/chat',          icon: MessageCircle },
     { name: 'Níveis',        path: '/niveis',        icon: Trophy },
   ];
-
-  const userProfile = profile;
   if (userProfile?.modo === 'empresarial') {
     navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
     navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
