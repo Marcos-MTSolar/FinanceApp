@@ -10,7 +10,7 @@ import PDFParser from 'pdf2json';
 // pdf-parse import removido daqui para evitar problemas no serverless
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import admin from 'firebase-admin';
+import admin, { type ServiceAccount } from 'firebase-admin';
 import multer from 'multer';
 import React from 'react';
 import * as ReactPDF from '@react-pdf/renderer';
@@ -88,21 +88,32 @@ const ReportPDF = ({ data }: { data: any }) => {
 const generatePdfStream = async (data: any) => {
   try {
     const dados = data || {};
-    const transacoes = dados.transacoes ?? [];
-    const metas = dados.metas ?? [];
-    const funcionarios = dados.funcionarios ?? [];
     const receitas = dados.receitas ?? 0;
     const despesas = dados.despesas ?? 0;
+    const metas = dados.metas ?? [];
+    const alertas = dados.alertas ?? [];
 
+    // React.createElement garante compatibilidade
+    // com bundle ESM sem depender do JSX transform
     const elemento = React.createElement(ReportPDF, {
-      data: { ...dados, transacoes, metas, funcionarios, receitas, despesas }
+      data: { receitas, despesas, metas, alertas,
+              balanco: dados.balanco ?? '0.00' }
     });
 
-    // @react-pdf/renderer v4.x exporta renderToStream direto
-    const stream = await ReactPDF.renderToStream(elemento);
-    return stream;
+    console.log('[generatePdfStream] Exports ReactPDF:',
+      Object.keys(ReactPDF));
+
+    const renderFn = (ReactPDF as any).renderToStream;
+    if (!renderFn) {
+      throw new Error(
+        'renderToStream não encontrado em @react-pdf/renderer. ' +
+        'Exports: ' + Object.keys(ReactPDF).join(', ')
+      );
+    }
+
+    return await renderFn(elemento);
   } catch (err) {
-    console.error('[generatePdfStream] Falha ao renderizar PDF:', err);
+    console.error('[generatePdfStream] Erro:', err);
     throw err;
   }
 };
@@ -119,14 +130,17 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !admin.apps.length) {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    const serviceAccount = JSON.parse(
+      process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+    ) as ServiceAccount;
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
+    console.log('[Firebase Admin] Inicializado com sucesso.');
   } catch (e) {
-    console.warn("Failed to initialize Firebase Admin", e);
+    console.warn('[Firebase Admin] Falha ao inicializar:', e);
   }
 }
 
