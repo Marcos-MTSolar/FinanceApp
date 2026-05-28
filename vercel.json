@@ -4,14 +4,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.tsx": {
+    "api/bundle.cjs": {
       "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "node_modules/@react-pdf/**"
+      "memory": 1024
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/api/(.*)", "destination": "/api/bundle" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
