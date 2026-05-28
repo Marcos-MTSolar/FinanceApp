@@ -167,49 +167,28 @@ export function DemonstrativosPage() {
   const handleExportarPDF = async () => {
     if (!user) return;
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const payload = {
-        receitas: currentDRE.receitaBruta.toFixed(2),
-        despesas: (currentDRE.custos + currentDRE.despesasOp + currentDRE.despesasFin).toFixed(2),
-        balanco: currentDRE.lucroLiquido.toFixed(2),
-        metas: [
-          { titulo: `Demonstração do Resultado (DRE) - ${competencia}` },
-          { titulo: `Receita Líquida: ${fmt(currentDRE.receitaLiquida)}` },
-          { titulo: `Lucro Operacional: ${fmt(currentDRE.lucroOperacional)}` }
-        ],
-        alertas: [
-          `Faturamento Bruto: ${fmt(currentDRE.receitaBruta)}`,
-          `(-) Impostos: ${fmt(currentDRE.impostosPeriodo)}`,
-          `(-) Custos Diretos: ${fmt(currentDRE.custos)}`,
-          `(-) Despesas Operacionais: ${fmt(currentDRE.despesasOp)}`,
-          `(-) Despesas Financeiras: ${fmt(currentDRE.despesasFin)}`,
-          `Margem Líquida DRE: ${(currentDRE.receitaBruta > 0 ? (currentDRE.lucroLiquido / currentDRE.receitaBruta) * 100 : 0).toFixed(1)}%`
-        ]
-      };
-
       toast.loading('Compilando relatório contábil DRE...', { id: 'pdf' });
       
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/relatorio', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ userId: auth.currentUser?.uid })
       });
 
-      if (!response.ok) throw new Error('Erro gerando PDF');
+      if (!response.ok) throw new Error('Falha ao gerar relatório');
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'relatorio-financeai.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'relatorio-financeai.pdf');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       toast.success('Relatório DRE baixado! 📄', { id: 'pdf' });
     } catch (err) {

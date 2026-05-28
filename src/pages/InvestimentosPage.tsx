@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, Timestamp, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '../lib/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
@@ -27,6 +27,47 @@ interface Ativo {
   criadoEm: string;
 }
 
+interface MetaInvestimento {
+  id?: string;
+  titulo: string;
+  descricao: string;
+  status: 'ativa' | 'concluida';
+  criadoEm?: Timestamp;
+}
+
+interface Provento {
+  id?: string;
+  mes: string; // formato "YYYY-MM"
+  valor: number;
+  criadoEm?: Timestamp;
+}
+
+const metasKraken = [
+  { classe: 'K', label: 'Caixa (K)', ideal: '10–15%', idealMin: 0.10, idealMax: 0.15 },
+  { classe: 'R', label: 'Real Estate (R)', ideal: '25%', idealMin: 0.25, idealMax: 0.25 },
+  { classe: 'A', label: 'Ações BR (A)', ideal: '25%', idealMin: 0.25, idealMax: 0.25 },
+  { classe: 'K2', label: 'Cripto (K)', ideal: '1–5%', idealMin: 0.01, idealMax: 0.05 },
+  { classe: 'E', label: 'Exterior/Negócios (E/N)', ideal: '25%', idealMin: 0.25, idealMax: 0.25 },
+];
+
+function classificarClasse(tipo: string): string {
+  switch (tipo) {
+    case 'Tesouro IPCA+':
+    case 'Tesouro Selic':
+    case 'CDB':
+    case 'LCI/LCA':
+      return 'K';
+    case 'FII':
+      return 'R';
+    case 'Ações':
+      return 'A';
+    case 'Cripto':
+      return 'K2';
+    default:
+      return 'E';
+  }
+}
+
 export function InvestimentosPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +76,15 @@ export function InvestimentosPage() {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Estados para Metas de Investimento
+  const [metasInv, setMetasInv] = useState<MetaInvestimento[]>([]);
+  const [novaMetaInv, setNovaMetaInv] = useState({ titulo: '', descricao: '' });
+  const [loadingMetaInv, setLoadingMetaInv] = useState(false);
+
+  // Estados para Proventos
+  const [proventos, setProventos] = useState<Provento[]>([]);
+  const [novoProvento, setNovoProvento] = useState({ mes: '', valor: '' });
 
   // Campos do formulário
   const [tipo, setTipo] = useState('Ações');
@@ -47,10 +97,10 @@ export function InvestimentosPage() {
   const userName = user?.displayName || user?.email?.split('@')[0] || 'Usuário';
   const userInitials = userName.substring(0, 2).toUpperCase();
 
-  // Carrega ativos do Firestore em tempo real
+  // Carrega ativos e metas do Firestore em tempo real
   useEffect(() => {
     if (!userId) return;
-    const unsub = onSnapshot(
+    const unsubAtivos = onSnapshot(
       collection(db, `investimentos/${userId}/items`),
       (snap) => {
         const list = snap.docs
@@ -64,7 +114,42 @@ export function InvestimentosPage() {
         setLoading(false);
       }
     );
-    return unsub;
+
+    const qMetas = query(
+      collection(db, `metasInvestimento/${userId}/items`),
+      orderBy('criadoEm', 'desc')
+    );
+    const unsubMetas = onSnapshot(
+      qMetas,
+      (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as MetaInvestimento));
+        setMetasInv(list);
+      },
+      (err) => {
+        console.error('[InvestimentosPage] Erro ao carregar metas de investimento:', err);
+      }
+    );
+
+    const qProventos = query(
+      collection(db, `proventosInvestimento/${userId}/items`),
+      orderBy('mes', 'asc')
+    );
+    const unsubProventos = onSnapshot(
+      qProventos,
+      (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Provento));
+        setProventos(list);
+      },
+      (err) => {
+        console.error('[InvestimentosPage] Erro ao carregar proventos:', err);
+      }
+    );
+
+    return () => {
+      unsubAtivos();
+      unsubMetas();
+      unsubProventos();
+    };
   }, [userId]);
 
   // Itens de navegação — mesmo padrão do Dashboard
@@ -122,12 +207,12 @@ export function InvestimentosPage() {
       // Deduz o valor investido do saldo registrando como despesa do tipo "Investimento"
       try {
         await addDoc(collection(db, 'transacoes', userId, 'items'), {
-          descricao: `Investimento: ${ticker.toUpperCase()}`,
+          descricao: `Investimento: ${ticker}`,
           valor: Number(quantidade) * Number(precoMedio),
           tipo: 'despesa',
-          categoria: 'Investimento',
-          data: Timestamp.fromDate(new Date(dataCompra)),
-          criadoEm: Timestamp.now()
+          categoria: 'Investimentos',
+          data: new Date().toISOString(),
+          criadoEm: serverTimestamp()
         });
       } catch (e) {
         console.error('[Investimentos] Erro ao registrar transação:', e);
@@ -166,6 +251,78 @@ export function InvestimentosPage() {
     }
   };
 
+  // Funções para Metas de Investimento
+  const adicionarMetaInvestimento = async () => {
+    if (!novaMetaInv.titulo.trim()) return;
+    setLoadingMetaInv(true);
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebaseConfig');
+      const { auth } = await import('../lib/firebaseConfig');
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      await addDoc(collection(db, `metasInvestimento/${userId}/items`), {
+        titulo: novaMetaInv.titulo.trim(),
+        descricao: novaMetaInv.descricao.trim(),
+        status: 'ativa',
+        criadoEm: serverTimestamp()
+      });
+      setNovaMetaInv({ titulo: '', descricao: '' });
+      toast.success('Meta de investimento adicionada!');
+    } catch (e) {
+      toast.error('Erro ao salvar meta de investimento.');
+    } finally {
+      setLoadingMetaInv(false);
+    }
+  };
+
+  const concluirMetaInvestimento = async (id: string) => {
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebaseConfig');
+      const { auth } = await import('../lib/firebaseConfig');
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      await updateDoc(doc(db, `metasInvestimento/${userId}/items/${id}`), { status: 'concluida' });
+      toast.success('Meta concluída!');
+    } catch (e) {
+      toast.error('Erro ao atualizar meta.');
+    }
+  };
+
+  const excluirMetaInvestimento = async (id: string) => {
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebaseConfig');
+      const { auth } = await import('../lib/firebaseConfig');
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      await deleteDoc(doc(db, `metasInvestimento/${userId}/items/${id}`));
+      toast.success('Meta removida.');
+    } catch (e) {
+      toast.error('Erro ao remover meta.');
+    }
+  };
+
+  const adicionarProvento = async () => {
+    if (!novoProvento.mes || !novoProvento.valor) return;
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const { db, auth } = await import('../lib/firebaseConfig');
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      await addDoc(collection(db, `proventosInvestimento/${userId}/items`), {
+        mes: novoProvento.mes,
+        valor: parseFloat(novoProvento.valor),
+        criadoEm: serverTimestamp()
+      });
+      setNovoProvento({ mes: '', valor: '' });
+      toast.success('Provento registrado!');
+    } catch (e) {
+      toast.error('Erro ao registrar provento.');
+    }
+  };
+
   // Cálculos de resumo
   const totalInvestido = ativos.reduce((acc, a) => acc + a.quantidade * a.precoMedio, 0);
   const tiposDistintos = [...new Set(ativos.map(a => a.tipo))];
@@ -173,6 +330,30 @@ export function InvestimentosPage() {
     tipo: t,
     total: ativos.filter(a => a.tipo === t).reduce((acc, a) => acc + a.quantidade * a.precoMedio, 0),
   }));
+
+  // Lógica KRAKEN
+  const valoresPorClasse = metasKraken.map(meta => {
+    const valorClasse = ativos
+      .filter(a => classificarClasse(a.tipo) === meta.classe)
+      .reduce((acc, a) => acc + a.quantidade * a.precoMedio, 0);
+    
+    const pct = totalInvestido > 0 ? valorClasse / totalInvestido : 0;
+    
+    let status: 'Dentro da meta' | 'Abaixo da meta' | 'Acima da meta' = 'Dentro da meta';
+    if (pct < meta.idealMin) status = 'Abaixo da meta';
+    else if (pct > meta.idealMax) status = 'Acima da meta';
+
+    return {
+      ...meta,
+      valor: valorClasse,
+      pct,
+      status
+    };
+  });
+
+  // Cálculos de Proventos
+  const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
+  const mediaMensalProventos = proventos.length > 0 ? totalProventos / proventos.length : 0;
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -493,6 +674,267 @@ export function InvestimentosPage() {
                 </table>
               </div>
             )}
+          </div>
+
+          {/* Seção Metas de Investimento */}
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20 space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-400" />
+              Metas de Investimento
+              {metasInv.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-400 font-bold">
+                  {metasInv.length}
+                </span>
+              )}
+            </h3>
+
+            {/* Formulário */}
+            <div className="bg-gray-950/40 p-5 rounded-2xl border border-gray-850 space-y-4">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nova Meta</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Título</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Atingir R$ 10k em FIIs"
+                    value={novaMetaInv.titulo}
+                    onChange={e => setNovaMetaInv({ ...novaMetaInv, titulo: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Descrição</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Foco em ativos de dividendos mensais"
+                    value={novaMetaInv.descricao}
+                    onChange={e => setNovaMetaInv({ ...novaMetaInv, descricao: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={adicionarMetaInvestimento}
+                  disabled={loadingMetaInv}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all disabled:opacity-60"
+                >
+                  <Plus className="w-4 h-4" />
+                  {loadingMetaInv ? 'Adicionando...' : 'Adicionar Meta'}
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de Metas */}
+            {metasInv.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-xs font-medium bg-gray-950/20 rounded-2xl border border-dashed border-gray-800">
+                Nenhuma meta de investimento cadastrada.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {metasInv.map(meta => (
+                  <div key={meta.id} className="p-5 bg-gray-950/30 border border-gray-800/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-sm text-white">{meta.titulo}</h4>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          meta.status === 'concluida' 
+                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
+                            : 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {meta.status === 'concluida' ? 'Concluída' : 'Ativa'}
+                        </span>
+                      </div>
+                      {meta.descricao && (
+                        <p className="text-xs text-gray-400 font-medium leading-relaxed">{meta.descricao}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                      {meta.status === 'ativa' && (
+                        <button
+                          onClick={() => meta.id && concluirMetaInvestimento(meta.id)}
+                          className="px-3.5 py-2 bg-emerald-600/10 hover:bg-emerald-600 border border-emerald-500/20 hover:border-emerald-500 text-emerald-400 hover:text-white text-xs font-bold rounded-xl transition-all"
+                        >
+                          Concluir
+                        </button>
+                      )}
+                      <button
+                        onClick={() => meta.id && excluirMetaInvestimento(meta.id)}
+                        className="p-2 text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Seção Distribuição KRAKEN */}
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-400" />
+                Distribuição da Carteira (KRAKEN)
+              </h3>
+              <div className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs font-bold text-indigo-300">
+                Aporte Mensal: {formatCurrency(287)} (Série KRAKEN)
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {valoresPorClasse.map(classe => {
+                const percentVal = (classe.pct * 100).toFixed(1);
+                let badgeStyle = '';
+                if (classe.status === 'Dentro da meta') {
+                  badgeStyle = 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400';
+                } else if (classe.status === 'Abaixo da meta') {
+                  badgeStyle = 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400';
+                } else {
+                  badgeStyle = 'bg-rose-500/10 border border-rose-500/20 text-rose-400';
+                }
+
+                return (
+                  <div key={classe.classe} className="p-4 bg-gray-950/40 border border-gray-850 rounded-2xl space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-xs font-extrabold text-white">
+                          {classe.classe}
+                        </span>
+                        <span className="font-bold text-sm text-gray-200">{classe.label}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                        <span className="text-gray-400">Atual:</span>
+                        <span className="text-white">{percentVal}% ({formatCurrency(classe.valor)})</span>
+                        <span className="text-gray-600">·</span>
+                        <span className="text-gray-400">Meta:</span>
+                        <span className="text-indigo-300">{classe.ideal}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider ${badgeStyle}`}>
+                          {classe.status === 'Dentro da meta' ? '✅ Dentro' : classe.status === 'Abaixo da meta' ? '⚠️ Abaixo' : '🔺 Acima'}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Barra de progresso */}
+                    <div className="w-full h-2 bg-gray-900 border border-gray-850 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          classe.status === 'Dentro da meta' 
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
+                            : classe.status === 'Abaixo da meta' 
+                            ? 'bg-gradient-to-r from-yellow-500 to-amber-500' 
+                            : 'bg-gradient-to-r from-rose-500 to-red-500'
+                        }`} 
+                        style={{ width: `${Math.min(100, Math.max(0, classe.pct * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-gray-800/80 gap-4 text-xs font-bold text-gray-400">
+              <span>Patrimônio Total Derivado: <span className="text-white text-sm font-extrabold">{formatCurrency(totalInvestido)}</span></span>
+              <span className="font-medium text-gray-500">
+                A distribuição é calculada automaticamente com base nos seus ativos cadastrados.
+              </span>
+            </div>
+          </div>
+
+          {/* Seção Histórico de Proventos */}
+          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20 space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-indigo-400" />
+              Histórico de Proventos
+              {proventos.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-400 font-bold">
+                  {proventos.length}
+                </span>
+              )}
+            </h3>
+
+            {/* Formulário */}
+            <div className="bg-gray-950/40 p-5 rounded-2xl border border-gray-850 space-y-4">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Registrar Novo Provento</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mês</label>
+                  <input
+                    type="month"
+                    value={novoProvento.mes}
+                    onChange={e => setNovoProvento({ ...novoProvento, mes: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all [color-scheme:dark]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Valor Recebido (R$)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-extrabold text-gray-500">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={novoProvento.valor}
+                      onChange={e => setNovoProvento({ ...novoProvento, valor: e.target.value })}
+                      className="w-full pl-11 pr-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={adicionarProvento}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  Registrar Provento
+                </button>
+              </div>
+            </div>
+
+            {/* Tabela de Proventos */}
+            {proventos.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-xs font-medium bg-gray-950/20 rounded-2xl border border-dashed border-gray-800">
+                Nenhum provento recebido ou cadastrado.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[320px]">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                      <th className="px-4 py-3 pb-3 pl-2">Mês</th>
+                      <th className="px-4 py-3 pb-3 text-right">Valor Recebido (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800/60 text-sm font-medium text-gray-200">
+                    {proventos.map(prov => (
+                      <tr key={prov.id} className="hover:bg-gray-800/40 transition-colors">
+                        <td className="py-3 pl-2 text-gray-300 font-bold">
+                          {prov.mes}
+                        </td>
+                        <td className="py-3 text-right text-emerald-400 font-bold">
+                          {formatCurrency(prov.valor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-gray-700">
+                      <td className="py-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Total Acumulado</td>
+                      <td className="py-4 text-right font-extrabold text-white text-base">{formatCurrency(totalProventos)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4 border-t border-gray-800/80 text-xs font-bold text-gray-400">
+              <span className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-3.5 py-1.5 text-indigo-300 text-sm">
+                Média mensal: {formatCurrency(mediaMensalProventos)}
+              </span>
+            </div>
           </div>
         </div>
       </main>

@@ -314,10 +314,6 @@ export function Dashboard() {
     if (!checkAccess('Pro', 'Relatórios PDF Exportáveis')) return;
     
     try {
-      const receitasPDF = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
-      const despesasPDF = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + Math.abs(t.valor), 0);
-      const balancoPDF = receitasPDF - despesasPDF;
-
       const auth = getAuth();
       const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/relatorio', {
@@ -326,24 +322,19 @@ export function Dashboard() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          receitas: receitasPDF.toFixed(2),
-          despesas: despesasPDF.toFixed(2),
-          balanco: balancoPDF.toFixed(2),
-          metas: metas.filter(m => m.status === 'concluida').slice(0, 5),
-          alertas: alertasFlash
-        })
+        body: JSON.stringify({ userId: auth.currentUser?.uid })
       });
-      if (!response.ok) throw new Error('Falha ao gerar');
-      
+
+      if (!response.ok) throw new Error('Falha ao gerar relatório');
+
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'relatorio-financeai.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'relatorio-financeai.pdf');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch(e) {
       console.error(e);

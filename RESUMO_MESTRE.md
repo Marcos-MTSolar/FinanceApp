@@ -332,6 +332,19 @@ Carteira de ativos financeiros do usuário:
 - `dataCompra` (string `YYYY-MM-DD`): Data da compra.
 - `criadoEm` (string ISO): Timestamp de criação do registro.
 
+#### 8. Subcoleção: `metasInvestimento/{userId}/items/{docId}`
+Metas específicas de investimento (independentes das metas financeiras):
+- `titulo` (string): Nome da meta de investimento
+- `descricao` (string): Detalhamento opcional
+- `status` (string): `ativa` ou `concluida`
+- `criadoEm` (Timestamp): Data de criação
+
+#### 9. Subcoleção: `proventosInvestimento/{userId}/items/{docId}`
+Histórico de dividendos e proventos recebidos:
+- `mes` (string `YYYY-MM`): Mês de competência do provento
+- `valor` (number): Valor recebido em R$
+- `criadoEm` (Timestamp): Data de registro
+
 ### Relacionamentos e Isolamento de Dados (Multitenancy)
 Sendo um banco de dados NoSQL baseado em documentos, o Firestore não aplica chaves estrangeiras rígidas relacionais. Em contrapartida, adota um modelo hierárquico aninhado por subcoleções dinâmicas estruturadas diretamente sob a chave identificadora `userId`.
 
@@ -639,3 +652,9 @@ Esses tokens e segredos são estritamente confidenciais e residem apenas no lado
 | 2026-05-27 10:48 (BRT) | **Correções de Rotas e Deploy**: Ocultada a rota de Investimentos e o item correspondente no menu lateral (`Dashboard.tsx`, `App.tsx`) para perfis no modo empresarial. Corrigido import dinâmico em `api/index.ts` (adicionado `.js`) e atualizados `vercel.json` e `package.json` para incluir `serverReportGenerator.tsx` no pacote final e prevenir erro de módulo não encontrado no ambiente Vercel. | `src/App.tsx`, `src/pages/Dashboard.tsx`, `api/index.ts`, `vercel.json`, `package.json` |
 | 2026-05-27 10:56 (BRT) | **Reorganização de Arquivos e Tratamento de Erros**: Movido o `serverReportGenerator.tsx` para dentro do diretório `api/` e atualizado seu respectivo import dinâmico em `api/index.ts` e caminho no `vercel.json`. Adicionado tratamento de exceções (try/catch) no registro de despesas geradas pela adição de investimentos em `InvestimentosPage.tsx` para assegurar fluxo ininterrupto da UI caso ocorra erro no Firestore. | `serverReportGenerator.tsx` -> `api/serverReportGenerator.tsx`, `api/index.ts`, `vercel.json`, `src/pages/InvestimentosPage.tsx` |
 | 2026-05-27 11:00 (BRT) | **Correção de Build Vercel**: Corrigido caminho do `serverReportGenerator.tsx` no script de build do `package.json` e import estático no `server.ts` após movimentação do arquivo para dentro da pasta `api/`. | `server.ts`, `package.json` |
+| 2026-05-28 | **PROMPT 1 — Correção de Desconto de Saldo**: Corrigido o documento de despesa gerado ao adicionar investimento em `InvestimentosPage.tsx`. Campos `tipo`, `valor`, `categoria` e `data` padronizados para que o Dashboard compute corretamente o saldo disponível. | `src/pages/InvestimentosPage.tsx` |
+| 2026-05-28 | **PROMPT 2 — Correção de Download PDF**: Padronizado o fetch de download de PDF no Dashboard e DemonstrativosPage para seguir o padrão Bearer Token + revokeObjectURL correto. | `src/components/Dashboard.tsx`, `src/pages/DemonstrativosPage.tsx` |
+| 2026-05-28 | **PROMPT 3 — Firestore Rules**: Adicionada regra de segurança para `metasInvestimento/{userId}/items`. | `firestore.rules` |
+| 2026-05-28 | **PROMPT 4 — Metas de Investimento**: Nova seção de metas de investimento adicionada em `InvestimentosPage.tsx` com CRUD completo na subcoleção `metasInvestimento/{userId}/items`. Independente das metas financeiras do app. | `src/pages/InvestimentosPage.tsx` |
+| 2026-05-28 | **PROMPT 5 — Distribuição KRAKEN**: Seção de acompanhamento da distribuição KRAKEN calculada automaticamente sobre os ativos cadastrados. Exibe percentual atual, meta ideal e status de cada classe. | `src/pages/InvestimentosPage.tsx` |
+| 2026-05-28 | **PROMPT 6 — Proventos Mensais**: Nova seção de registro e histórico de proventos mensais com subcoleção `proventosInvestimento/{userId}/items` e cálculo de média automática. | `src/pages/InvestimentosPage.tsx`, `firestore.rules` |
