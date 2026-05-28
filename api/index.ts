@@ -12,7 +12,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import multer from 'multer';
-import { generatePdfStream } from './serverReportGenerator';
 
 declare global {
   namespace Express {
@@ -97,6 +96,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
     try {
+      const { generatePdfStream } = await import('./serverReportGenerator.js');
       const data = req.body;
       const stream = await generatePdfStream(data);
       res.setHeader('Content-Type', 'application/pdf');

@@ -7,7 +7,7 @@
     "api/index.ts": {
       "maxDuration": 30,
       "memory": 1024,
-      "includeFiles": "node_modules/pdf-parse/lib/**,api/serverReportGenerator.tsx"
+      "includeFiles": "api/**"
     }
   },
   "rewrites": [
