@@ -14,7 +14,7 @@ import admin, { type ServiceAccount } from 'firebase-admin';
 import multer from 'multer';
 import React from 'react';
 import * as ReactPDF from '@react-pdf/renderer';
-const { Document, Page, Text, View, StyleSheet } = ReactPDF;
+const { Document, Page, Text, View, StyleSheet } = ReactPDF as any;
 
 declare global {
   namespace Express {
@@ -39,77 +39,81 @@ const ReportPDF = ({ data }: { data: any }) => {
   const safeData = data || {};
   const metas = safeData.metas || [];
   const alertas = safeData.alertas || [];
-  return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        <Text style={pdfStyles.header}>Relatório Inteligente - FinanceAI</Text>
-        <View style={pdfStyles.grid}>
-          <View style={pdfStyles.card}>
-            <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Receitas</Text>
-            <Text style={{ fontSize: 14, color: '#10b981', fontWeight: 'bold' }}>R$ {safeData.receitas || '0.00'}</Text>
-          </View>
-          <View style={pdfStyles.card}>
-            <Text style={{ fontSize: 10, color: '#6b7280' }}>Total Despesas</Text>
-            <Text style={{ fontSize: 14, color: '#ef4444', fontWeight: 'bold' }}>R$ {safeData.despesas || '0.00'}</Text>
-          </View>
-          <View style={pdfStyles.card}>
-            <Text style={{ fontSize: 10, color: '#6b7280' }}>Balanço do Mês</Text>
-            <Text style={{ fontSize: 14, color: '#4f46e5', fontWeight: 'bold' }}>R$ {safeData.balanco || '0.00'}</Text>
-          </View>
-        </View>
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.title}>Metas Alcançadas</Text>
-          {metas.length > 0 ? (
-            metas.map((m: any, i: number) => (
-              <Text key={i} style={pdfStyles.text}>- {m.titulo}: Concluido em {m.concluidoEm || 'Breve'}</Text>
-            ))
-          ) : (
-            <Text style={pdfStyles.text}>Nenhuma meta concluida neste periodo.</Text>
-          )}
-        </View>
-        <View style={pdfStyles.section}>
-          <Text style={pdfStyles.title}>Alertas da IA</Text>
-          {alertas.length > 0 ? (
-            alertas.map((a: string, i: number) => (
-              <Text key={i} style={pdfStyles.alertItem}>* {a}</Text>
-            ))
-          ) : (
-            <Text style={pdfStyles.text}>Tudo sob controle! Nenhum alerta grave.</Text>
-          )}
-        </View>
-        <Text style={{ fontSize: 10, textAlign: 'center', marginTop: 20, color: '#9ca3af' }}>
-          Gerado via FinanceAI Pro
-        </Text>
-      </Page>
-    </Document>
+
+  return React.createElement(Document, null,
+    React.createElement(Page, { size: 'A4', style: pdfStyles.page },
+      React.createElement(Text, { style: pdfStyles.header },
+        'Relatório Inteligente - FinanceAI'),
+      React.createElement(View, { style: pdfStyles.grid },
+        React.createElement(View, { style: pdfStyles.card },
+          React.createElement(Text, { style: { fontSize: 10, color: '#6b7280' } }, 'Total Receitas'),
+          React.createElement(Text, { style: { fontSize: 14, color: '#10b981', fontWeight: 'bold' } },
+            'R$ ' + (safeData.receitas || '0.00'))
+        ),
+        React.createElement(View, { style: pdfStyles.card },
+          React.createElement(Text, { style: { fontSize: 10, color: '#6b7280' } }, 'Total Despesas'),
+          React.createElement(Text, { style: { fontSize: 14, color: '#ef4444', fontWeight: 'bold' } },
+            'R$ ' + (safeData.despesas || '0.00'))
+        ),
+        React.createElement(View, { style: pdfStyles.card },
+          React.createElement(Text, { style: { fontSize: 10, color: '#6b7280' } }, 'Balanço do Mês'),
+          React.createElement(Text, { style: { fontSize: 14, color: '#4f46e5', fontWeight: 'bold' } },
+            'R$ ' + (safeData.balanco || '0.00'))
+        )
+      ),
+      React.createElement(View, { style: pdfStyles.section },
+        React.createElement(Text, { style: pdfStyles.title }, 'Metas Alcançadas'),
+        ...(metas.length > 0
+          ? metas.map((m: any, i: number) =>
+              React.createElement(Text, { key: i, style: pdfStyles.text },
+                '- ' + m.titulo + ': Concluido em ' + (m.concluidoEm || 'Breve'))
+            )
+          : [React.createElement(Text, { style: pdfStyles.text },
+              'Nenhuma meta concluida neste periodo.')]
+        )
+      ),
+      React.createElement(View, { style: pdfStyles.section },
+        React.createElement(Text, { style: pdfStyles.title }, 'Alertas da IA'),
+        ...(alertas.length > 0
+          ? alertas.map((a: string, i: number) =>
+              React.createElement(Text, { key: i, style: pdfStyles.alertItem },
+                '* ' + a)
+            )
+          : [React.createElement(Text, { style: pdfStyles.text },
+              'Tudo sob controle! Nenhum alerta grave.')]
+        )
+      ),
+      React.createElement(Text,
+        { style: { fontSize: 10, textAlign: 'center', marginTop: 20, color: '#9ca3af' } },
+        'Gerado via FinanceAI Pro')
+    )
   );
 };
 
 const generatePdfStream = async (data: any) => {
   try {
     const dados = data || {};
-    const receitas = dados.receitas ?? 0;
-    const despesas = dados.despesas ?? 0;
-    const metas = dados.metas ?? [];
-    const alertas = dados.alertas ?? [];
 
-    // React.createElement garante compatibilidade
-    // com bundle ESM sem depender do JSX transform
-    const elemento = React.createElement(ReportPDF, {
-      data: { receitas, despesas, metas, alertas,
-              balanco: dados.balanco ?? '0.00' }
-    });
-
-    console.log('[generatePdfStream] Exports ReactPDF:',
+    console.log('[generatePdfStream] ReactPDF keys:',
       Object.keys(ReactPDF));
 
     const renderFn = (ReactPDF as any).renderToStream;
     if (!renderFn) {
       throw new Error(
-        'renderToStream não encontrado em @react-pdf/renderer. ' +
-        'Exports: ' + Object.keys(ReactPDF).join(', ')
+        'renderToStream não encontrado. Keys: ' +
+        Object.keys(ReactPDF).join(', ')
       );
     }
+
+    const elemento = React.createElement(ReportPDF, {
+      data: {
+        receitas: dados.receitas ?? '0.00',
+        despesas: dados.despesas ?? '0.00',
+        balanco: dados.balanco ?? '0.00',
+        metas: dados.metas ?? [],
+        alertas: dados.alertas ?? []
+      }
+    });
 
     return await renderFn(elemento);
   } catch (err) {
@@ -134,7 +138,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(
       process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-    ) as ServiceAccount;
+    );
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
@@ -300,7 +304,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
       const pdfResponse = await fetch(url);
       const arrayBuffer = await pdfResponse.arrayBuffer();
       
-      const pdfParse = require('pdf-parse/lib/pdf-parse.js');
+      const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js');
+      const pdfParse = pdfParseModule.default || pdfParseModule;
       const data = await pdfParse(Buffer.from(arrayBuffer));
       
       res.json({ text: data.text });

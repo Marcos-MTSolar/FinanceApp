@@ -4,7 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.mjs": {
+    "api/index.tsx": {
       "maxDuration": 30,
       "memory": 1024,
       "includeFiles": "node_modules/@react-pdf/**"
