@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild api/index.ts --bundle --platform=node --target=node18 --outfile=api/index.js --loader:.tsx=tsx --external:@react-pdf/renderer --external:react --external:react-dom",
+    "build": "vite build && esbuild api/index.tsx --bundle --platform=node --target=node18 --outfile=api/index.js --loader:.tsx=tsx --external:@react-pdf/renderer",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
