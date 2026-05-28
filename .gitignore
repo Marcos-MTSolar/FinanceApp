@@ -25,3 +25,6 @@ coverage/
 # O android/.gitignore já exclui arquivos gerados (build/, *.apk, assets/public).
 # NÃO adicione android/ aqui.
 
+# ── API Serverless Build Artifacts ────────────────────────────────────
+api/index.js
+api/index.mjs
