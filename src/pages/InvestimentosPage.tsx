@@ -211,6 +211,7 @@ export function InvestimentosPage() {
           valor: Number(quantidade) * Number(precoMedio),
           tipo: 'despesa',
           categoria: 'Investimentos',
+          modo: 'pessoal',
           data: new Date().toISOString(),
           criadoEm: serverTimestamp()
         });
