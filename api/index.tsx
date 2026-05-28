@@ -13,7 +13,8 @@ import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import multer from 'multer';
 import React from 'react';
-import ReactPDF, { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import * as ReactPDF from '@react-pdf/renderer';
+const { Document, Page, Text, View, StyleSheet } = ReactPDF;
 
 declare global {
   namespace Express {
@@ -92,9 +93,14 @@ const generatePdfStream = async (data: any) => {
     const funcionarios = dados.funcionarios ?? [];
     const receitas = dados.receitas ?? 0;
     const despesas = dados.despesas ?? 0;
-    // @ts-ignore
-    const renderToStream = ReactPDF.renderToStream || ReactPDF.default?.renderToStream;
-    return await renderToStream(<ReportPDF data={{ ...dados, transacoes, metas, funcionarios, receitas, despesas }} />);
+
+    const elemento = React.createElement(ReportPDF, {
+      data: { ...dados, transacoes, metas, funcionarios, receitas, despesas }
+    });
+
+    // @react-pdf/renderer v4.x exporta renderToStream direto
+    const stream = await ReactPDF.renderToStream(elemento);
+    return stream;
   } catch (err) {
     console.error('[generatePdfStream] Falha ao renderizar PDF:', err);
     throw err;
@@ -178,6 +184,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     }
     try {
       const data = req.body;
+      console.log('[/api/relatorio] userId:', req.user?.uid);
+      console.log('[/api/relatorio] body keys:', Object.keys(data));
+      console.log('[/api/relatorio] ReactPDF exports:', Object.keys(ReactPDF));
       const stream = await generatePdfStream(data);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="relatorio-financeai.pdf"');

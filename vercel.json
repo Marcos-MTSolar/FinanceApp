@@ -4,9 +4,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.tsx": {
+    "api/index.js": {
       "maxDuration": 30,
-      "memory": 1024
+      "memory": 1024,
+      "includeFiles": "node_modules/@react-pdf/**"
     }
   },
   "rewrites": [
