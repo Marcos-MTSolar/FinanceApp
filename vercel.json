@@ -1,20 +1,15 @@
 {
-  "version": 2,
-  "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "vite build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.js": {
-      "maxDuration": 30,
+    "api/index.tsx": {
       "memory": 1024,
+      "maxDuration": 30,
       "includeFiles": "node_modules/@react-pdf/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/api/(.*)", "destination": "/api/index.tsx" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
