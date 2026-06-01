@@ -255,6 +255,8 @@ export function Dashboard() {
 
   let receitasMes = 0;
   let despesasMes = 0;
+  // Acumula somente despesas de Capital de Giro (modo empresarial)
+  let totalCapitalDeGiro = 0;
 
   transactions.forEach((t) => {
     const val = Number(t.valor) || 0;
@@ -263,11 +265,16 @@ export function Dashboard() {
         receitasMes += val;
       } else {
         despesasMes += Math.abs(val);
+        if (t.categoria === 'Capital de Giro') {
+          totalCapitalDeGiro += Math.abs(val);
+        }
       }
     }
   });
 
   const saldoTotal = receitasMes - despesasMes;
+  // Caixa Disponível: receitas menos todas as despesas EXCETO Capital de Giro
+  const caixaDisponivel = receitasMes - (despesasMes - totalCapitalDeGiro);
 
   // Calcular total reservado em metas (apenas mês atual para o card)
   const totalReservadoMetas = transactions
@@ -580,6 +587,29 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* Caixa Disponível */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-cyan-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-cyan-500/50 transition-all duration-300">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Caixa Disponível</span>
+                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl text-cyan-400">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className={`text-3xl font-extrabold tracking-tight ${caixaDisponivel >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+                    {loading ? 'Carregando...' : formatCurrency(caixaDisponivel)}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-cyan-400 font-medium">
+                    <span className="flex items-center gap-0.5 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Operacional</span>
+                    </span>
+                    <span className="text-gray-500">excl. capital de giro</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Capital de Giro */}
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-purple-950/30 border border-gray-800 rounded-3xl p-6 lg:p-7 shadow-xl shadow-black/20 group hover:border-purple-500/50 transition-all duration-300">
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
@@ -591,14 +621,14 @@ export function Dashboard() {
                 </div>
                 <div className="mt-4">
                   <h3 className="text-3xl font-extrabold text-purple-400 tracking-tight">
-                    {loading ? 'Carregando...' : formatCurrency(saldoTotal)}
+                    {loading ? 'Carregando...' : formatCurrency(totalCapitalDeGiro)}
                   </h3>
                   <div className="flex items-center gap-2 mt-3 text-xs text-purple-400 font-medium">
                     <span className="flex items-center gap-0.5 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                      <span>Disponível</span>
+                      <Briefcase className="w-3.5 h-3.5" />
+                      <span>Alocado</span>
                     </span>
-                    <span className="text-gray-500">em caixa / bancos</span>
+                    <span className="text-gray-500">em giro / bancos</span>
                   </div>
                 </div>
               </div>

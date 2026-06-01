@@ -12,13 +12,17 @@ interface NewTransactionModalProps {
   modo: 'pessoal' | 'empresarial';
 }
 
-const CATEGORIES = [
+const EXPENSE_CATEGORIES = [
   'Alimentação',
   'Transporte',
   'Moradia',
   'Saúde',
   'Lazer',
   'Assinatura',
+  'Outros'
+];
+
+const INCOME_CATEGORIES = [
   'Salário',
   'Outros'
 ];
@@ -139,7 +143,9 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col">
+          {/* Container scrollável — cabeçalho e botões ficam fora */}
+          <div className="overflow-y-auto max-h-[70vh] space-y-6 pr-1">
           {error && (
             <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-400 font-medium">
               {error}
@@ -222,7 +228,13 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
                 onChange={(e) => setCategoria(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
               >
-                {CATEGORIES.map((cat) => (
+                {/* Capital de Giro aparece no topo apenas no modo empresarial e tipo despesa */}
+                {modo === 'empresarial' && tipo === 'despesa' && (
+                  <option value="Capital de Giro" className="bg-purple-900 text-purple-200 font-bold">
+                    💰 Capital de Giro
+                  </option>
+                )}
+                {(tipo === 'receita' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
                   <option key={cat} value={cat} className="bg-gray-900 text-white">
                     {cat}
                   </option>
@@ -345,9 +357,10 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
               Transação recorrente (mensal)
             </label>
           </div>
+          </div>{/* fim do container scrollável */}
 
-          {/* Botões de Ação */}
-          <div className="flex items-center gap-3 pt-4 border-t border-gray-800/80">
+          {/* Botões de Ação — fixos fora da área de scroll */}
+          <div className="flex items-center gap-3 pt-4 mt-4 border-t border-gray-800/80">
             <button
               type="button"
               onClick={handleClose}
