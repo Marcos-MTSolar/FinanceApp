@@ -26,7 +26,4 @@ coverage/
 # NÃO adicione android/ aqui.
 
 # ── API Serverless Build Artifacts ────────────────────────────────────
-api/index.js
-api/index.mjs
-api/bundle.cjs
-api/dist/
+# (Removidos: Vercel agora compila nativamente de api/server.tsx)
