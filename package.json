@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "esbuild api/index.tsx --bundle --platform=node --format=cjs --outfile=api/dist/index.cjs --loader:.tsx=tsx --external:@react-pdf/renderer --external:firebase-admin --external:groq-sdk --external:pdf2json --external:multer --external:express --external:helmet --external:express-rate-limit --external:xlsx --external:dotenv --external:node-fetch && vite build",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",

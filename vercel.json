@@ -1,15 +1,14 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.tsx": {
-      "memory": 1024,
+    "api/dist/index.cjs": {
       "maxDuration": 30,
       "includeFiles": "node_modules/@react-pdf/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.tsx" },
+    { "source": "/api/(.*)", "destination": "/api/dist/index.cjs" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

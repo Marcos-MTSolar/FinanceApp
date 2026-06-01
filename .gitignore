@@ -29,3 +29,4 @@ coverage/
 api/index.js
 api/index.mjs
 api/bundle.cjs
+api/dist/
