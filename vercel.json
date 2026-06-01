@@ -2,13 +2,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/dist/index.cjs": {
+    "api/index.cjs": {
       "maxDuration": 30,
       "includeFiles": "node_modules/@react-pdf/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/dist/index.cjs" },
+    { "source": "/api/(.*)", "destination": "/api/index.cjs" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
