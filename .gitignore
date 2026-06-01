@@ -28,3 +28,4 @@ coverage/
 # ── API Serverless Build Artifacts ────────────────────────────────────
 api/index.js
 api/index.mjs
+api/bundle.cjs
