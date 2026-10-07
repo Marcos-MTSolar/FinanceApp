@@ -57,5 +57,29 @@ service cloud.firestore {
     match /proventosInvestimento/{userId}/items/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /reservas/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /empresas/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /impostos/{userId}/items/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /balancos/{userId}/items/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /centrosCusto/{userId}/items/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /planoContas/{userId}/items/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

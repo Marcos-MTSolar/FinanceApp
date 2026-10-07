@@ -37,7 +37,6 @@ export function MetasPage() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },

@@ -76,63 +76,9 @@ export function ConciliacaoPage() {
 
   // File change handler
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      setErrorMsg('O arquivo não pode exceder 10MB.');
-      return;
-    }
-
-    setErrorMsg('');
-    setUploadStep('processing');
-    setProgressMsg(`Analisando extrato: ${file.name}...`);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      setProgressMsg('Extraindo transações com Inteligência Artificial...');
-      const token = await user?.getIdToken();
-      const res = await fetch('/api/ia/classificar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error(`Erro de processamento no servidor (HTTP ${res.status}).`);
-      }
-
-      if (!res.ok) throw new Error(data.error || `Erro HTTP ${res.status}`);
-
-      if (!data.transacoes || data.transacoes.length === 0) {
-        throw new Error('Nenhuma transação identificada no extrato.');
-      }
-
-      const parsed: BankTransaction[] = data.transacoes.map((t: any, i: number) => ({
-        id: `bank_${i}_${Date.now()}`,
-        descricao: t.descricao,
-        valor: Number(t.valor) || 0,
-        data: t.data,
-        tipo: t.tipo || 'despesa',
-        categoria: t.categoria
-      }));
-
-      setBankTransactions(parsed);
-      setUploadStep('reconciling');
-      toast.success('Extrato importado com sucesso!');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Ocorreu um erro ao processar o extrato.');
-      setUploadStep('upload');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    toast.error('Importação de extratos via IA temporariamente indisponível.');
+    setErrorMsg('A funcionalidade de leitura de extratos via IA está desativada.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Compare bank and internal transactions (Tolerance: +/- 1 day, same absolute amount & type)
@@ -242,7 +188,6 @@ export function ConciliacaoPage() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },

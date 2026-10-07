@@ -40,7 +40,6 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { Dashboard } from './pages/Dashboard';
 import { Transacoes } from './pages/Transacoes';
 import { MetasPage } from './pages/MetasPage';
-import { ImportPage } from './pages/ImportPage';
 import { ChatPage } from './pages/ChatPage';
 import { NiveisPage } from './pages/NiveisPage';
 import { Simulador } from './components/Simulador';
@@ -106,14 +105,6 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MetasPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/importar"
-                element={
-                  <ProtectedRoute>
-                    <ImportPage />
                   </ProtectedRoute>
                 }
               />

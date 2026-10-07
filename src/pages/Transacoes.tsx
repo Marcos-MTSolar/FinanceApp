@@ -35,9 +35,7 @@ export function Transacoes() {
   const [filterCategoria, setFilterCategoria] = useState('todos');
   const [filterPeriodo, setFilterPeriodo] = useState<'este_mes' | 'ultimo_mes' | 'tres_meses' | 'todos'>('este_mes');
   const [filterOrigem, setFilterOrigem] = useState('todas');
-
-  // Modo do perfil do usuário (pessoal ou empresarial)
-  const modo = (profile?.modo as 'pessoal' | 'empresarial') || 'pessoal';
+  const modo = 'empresarial';
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -197,7 +195,6 @@ export function Transacoes() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },

@@ -11,17 +11,9 @@ export function OnboardingWizard() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
-  const [modo, setModo] = useState<'pessoal' | 'empresarial'>('pessoal');
+  const [modo] = useState<'empresarial'>('empresarial');
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<{ score: number; recomendacoes: string[] } | null>(null);
-
-  // Form Data (Pessoal)
-  const [rendaVenda, setRendaVenda] = useState('');
-  const [dividasValor, setDividasValor] = useState('');
-  const [temReserva, setTemReserva] = useState<boolean | null>(null);
-  const [poupancaMensal, setPoupancaMensal] = useState('');
-  const [objetivoDificuldade, setObjetivoDificuldade] = useState('organizar');
-  const [usaCartao, setUsaCartao] = useState<boolean | null>(null);
 
   // Form Data (Empresarial)
   const [faturamentoMensal, setFaturamentoMensal] = useState('');
@@ -36,16 +28,8 @@ export function OnboardingWizard() {
     if (!user) return;
     setLoading(true);
 
-    const payload = modo === 'pessoal' ? {
-      modo,
-      rendaVenda: Number(rendaVenda),
-      dividasValor: Number(dividasValor),
-      temReserva,
-      poupancaMensal: Number(poupancaMensal),
-      objetivoDificuldade,
-      usaCartao,
-    } : {
-      modo,
+    const payload = {
+      modo: 'empresarial',
       faturamentoMensal: Number(faturamentoMensal),
       numFuncionarios: Number(numFuncionarios),
       temCapitalGiro,
@@ -78,10 +62,8 @@ export function OnboardingWizard() {
         atualizadoEm: new Date().toISOString(),
       });
 
-      // Persiste a renda no perfil do usuário para que verificarExcessoLuxo possa lê-la
-      const rendaParaPerfil = modo === 'pessoal'
-        ? Number(rendaVenda) || 0
-        : Number(faturamentoMensal) || 0;
+      // Persiste o faturamento no perfil do usuário
+      const rendaParaPerfil = Number(faturamentoMensal) || 0;
       if (rendaParaPerfil > 0) {
         await setDoc(doc(db, 'users', user.uid), { renda: rendaParaPerfil }, { merge: true });
       }
@@ -90,8 +72,8 @@ export function OnboardingWizard() {
       await applyXpEvent(user.uid, 'DIAGNOSTICO_INICIAL');
       toast.success('+30 XP! Diagnóstico inicial concluído com sucesso 🎉');
 
-      if (profile?.modo !== modo) {
-        await switchMode(modo);
+      if (profile?.modo !== 'empresarial') {
+        await switchMode('empresarial');
       }
 
       setResultado(data);
@@ -119,103 +101,26 @@ export function OnboardingWizard() {
         {step === 1 && (
           <div className="space-y-6 text-center text-gray-800 dark:text-gray-100">
             <h1 className="text-3xl font-bold font-sans tracking-tight">Bem-vindo ao FinanceAI</h1>
-            <p className="text-gray-500 dark:text-gray-400">Qual o foco da sua gestão financeira?</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-              <button
-                onClick={() => setModo('pessoal')}
-                className={`p-6 border-2 rounded-2xl flex flex-col items-center justify-center transition-all ${
-                  modo === 'pessoal' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400'
-                }`}
-              >
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-xl">👨💼</span>
-                </div>
-                <span className="font-semibold text-lg">Pessoal</span>
-                <span className="text-sm text-gray-500 mt-2">Para minhas finanças em casa</span>
-              </button>
-
-              <button
-                onClick={() => setModo('empresarial')}
-                className={`p-6 border-2 rounded-2xl flex flex-col items-center justify-center transition-all ${
-                  modo === 'empresarial' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400'
-                }`}
-              >
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-xl">🏢</span>
-                </div>
-                <span className="font-semibold text-lg">Empresarial</span>
-                <span className="text-sm text-gray-500 mt-2">Para meu próprio negócio</span>
-              </button>
+            <p className="text-gray-500 dark:text-gray-400">Diagnóstico da Saúde Financeira da sua Empresa</p>
+            <div className="p-8 border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex flex-col items-center justify-center mt-6">
+              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center mb-4">
+                <span className="text-3xl">🏢</span>
+              </div>
+              <span className="font-bold text-xl">Gestão Empresarial</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300 mt-2 text-center max-w-md">
+                Avalie o faturamento, margem de lucro, capital de giro e fluxo de caixa do seu negócio.
+              </span>
             </div>
             <button
               onClick={() => setStep(2)}
               className="mt-8 w-full bg-indigo-600 text-white font-medium py-3 rounded-xl hover:bg-indigo-700 transition"
             >
-              Continuar
+              Iniciar Diagnóstico Empresarial
             </button>
           </div>
         )}
 
-        {step === 2 && modo === 'pessoal' && (
-          <div className="space-y-6 text-gray-800 dark:text-gray-100">
-            <h2 className="text-2xl font-bold font-sans">Diagnóstico Pessoal</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Renda Mensal (R$)</label>
-                <input type="number" value={rendaVenda} onChange={e => setRendaVenda(e.target.value)} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3" placeholder="Ex: 5000" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Valor das Dívidas Atuais (R$)</label>
-                <input type="number" value={dividasValor} onChange={e => setDividasValor(e.target.value)} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3" placeholder="Ex: 1500" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Possui reserva de emergência?</label>
-                  <select value={temReserva === null ? '' : temReserva.toString()} onChange={e => setTemReserva(e.target.value === 'true')} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3">
-                    <option value="" disabled>Selecione...</option>
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Usa cartão com frequência?</label>
-                  <select value={usaCartao === null ? '' : usaCartao.toString()} onChange={e => setUsaCartao(e.target.value === 'true')} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3">
-                    <option value="" disabled>Selecione...</option>
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Quanto quer economizar/mês (R$)</label>
-                <input type="number" value={poupancaMensal} onChange={e => setPoupancaMensal(e.target.value)} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3" placeholder="Ex: 500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Objetivo Principal</label>
-                <select value={objetivoDificuldade} onChange={e => setObjetivoDificuldade(e.target.value)} className="w-full border dark:border-gray-700 dark:bg-gray-900 rounded-lg p-3">
-                  <option value="quitar dívidas">Quitar dívidas</option>
-                  <option value="comprar algo">Comprar algo</option>
-                  <option value="investir">Começar a investir</option>
-                  <option value="organizar">Me organizar melhor</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-between mt-8 gap-4">
-              <button onClick={() => setStep(1)} className="w-1/3 bg-gray-200 dark:bg-gray-700 font-medium py-3 rounded-xl transition">Voltar</button>
-              <button disabled={loading} onClick={handleSubmit} className="w-2/3 bg-indigo-600 text-white font-medium py-3 rounded-xl hover:bg-indigo-700 transition disabled:opacity-50">
-                {loading ? 'Analisando perfil...' : 'Gerar Score'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && modo === 'empresarial' && (
+        {step === 2 && (
           <div className="space-y-6 text-gray-800 dark:text-gray-100">
             <h2 className="text-2xl font-bold font-sans">Diagnóstico Empresarial</h2>
             

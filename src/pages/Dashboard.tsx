@@ -27,9 +27,8 @@ export function Dashboard() {
   const [periodo, setPeriodo] = useState<30 | 60 | 90>(30);
   const [loading, setLoading] = useState(true);
 
-  // Estado do Modo (pessoal | empresarial) com fallback padrão 'pessoal'
-  const [modo, setModo] = useState<'pessoal' | 'empresarial'>('pessoal');
-  const [changingModo, setChangingModo] = useState(false);
+  // Estado do Modo (fixado no modo empresarial)
+  const modo = 'empresarial';
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -38,22 +37,7 @@ export function Dashboard() {
     return () => unsubscribeAuth();
   }, []);
 
-  useEffect(() => {
-    const fetchUserMode = async () => {
-      if (!user?.uid) return;
-      try {
-        const docSnap = await getDoc(doc(db, 'users', user.uid));
-        if (docSnap.exists() && docSnap.data().modo) {
-          setModo(docSnap.data().modo);
-        } else {
-          setModo('pessoal');
-        }
-      } catch (err) {
-        console.error('Erro ao buscar modo do usuário', err);
-      }
-    };
-    fetchUserMode();
-  }, [user?.uid]);
+  
 
   useEffect(() => {
     if (!user?.uid) {
@@ -194,19 +178,7 @@ export function Dashboard() {
     }
   }, [user?.uid, transactions.length]);
 
-  const setModoNoFirestore = async (novoModo: 'pessoal' | 'empresarial') => {
-    if (!user?.uid || novoModo === modo) return;
-    setChangingModo(true);
-    try {
-      await setDoc(doc(db, 'users', user.uid), { modo: novoModo }, { merge: true });
-      setModo(novoModo);
-    } catch (e) {
-      console.error('Erro ao atualizar modo no Firestore:', e);
-      toast.error('Erro ao alterar o modo. Tente novamente.');
-    } finally {
-      setChangingModo(false);
-    }
-  };
+
 
   const userName = user?.displayName || user?.email?.split('@')[0] || profile?.nome || 'Usuário Demo';
   const userInitials = userName.substring(0, 2).toUpperCase();
@@ -327,27 +299,23 @@ export function Dashboard() {
 
   const userProfile = profile;
   const navItems = [
-    { name: 'Dashboard',     path: '/dashboard',     icon: LayoutDashboard },
-    { name: 'Transações',    path: '/transacoes',    icon: CreditCard },
-    { name: 'Importar',      path: '/importar',      icon: Upload },
-    { name: 'Metas',         path: '/metas',         icon: Target },
-    { name: 'Renda Extra',   path: '/renda-extra',   icon: TrendingUp },
-    ...(userProfile?.modo !== 'empresarial' ? [{ name: 'Investimentos', path: '/investimentos', icon: BarChart2 }] : []),
-    { name: 'Assistente IA', path: '/chat',          icon: MessageCircle },
-    { name: 'Níveis',        path: '/niveis',        icon: Trophy },
+    { name: 'Dashboard',        path: '/dashboard',              icon: LayoutDashboard },
+    { name: 'Transações',       path: '/transacoes',             icon: CreditCard },
+    { name: 'Metas',            path: '/metas',                  icon: Target },
+    { name: 'Renda Extra',      path: '/renda-extra',            icon: TrendingUp },
+    { name: 'Assistente IA',    path: '/chat',                   icon: MessageCircle },
+    { name: 'Níveis',           path: '/niveis',                 icon: Trophy },
+    { name: 'Cadastro Empresa', path: '/empresa/cadastro',       icon: Briefcase },
+    { name: 'Funcionários',     path: '/empresa/funcionarios',   icon: Users },
+    { name: 'Rescisão',         path: '/empresa/rescisao',       icon: FileText },
+    { name: 'Reservas',         path: '/empresa/reservas',       icon: PiggyBank },
+    { name: 'Impostos',         path: '/empresa/impostos',       icon: Percent },
+    { name: 'Centro de Custos', path: '/empresa/centro-custos',  icon: Tag },
+    { name: 'Indicadores',      path: '/empresa/indicadores',    icon: Activity },
+    { name: 'Demonstrativos',   path: '/empresa/demonstrativos', icon: Scale },
+    { name: 'Plano de Contas',  path: '/empresa/plano-contas',   icon: Network },
+    { name: 'Conciliação',      path: '/empresa/conciliacao',    icon: CheckSquare },
   ];
-  if (userProfile?.modo === 'empresarial') {
-    navItems.push({ name: 'Cadastro Empresa', path: '/empresa/cadastro', icon: Briefcase });
-    navItems.push({ name: 'Funcionários', path: '/empresa/funcionarios', icon: Users });
-    navItems.push({ name: 'Rescisão', path: '/empresa/rescisao', icon: FileText });
-    navItems.push({ name: 'Reservas', path: '/empresa/reservas', icon: PiggyBank });
-    navItems.push({ name: 'Impostos', path: '/empresa/impostos', icon: Percent });
-    navItems.push({ name: 'Centro de Custos', path: '/empresa/centro-custos', icon: Tag });
-    navItems.push({ name: 'Indicadores', path: '/empresa/indicadores', icon: Activity });
-    navItems.push({ name: 'Demonstrativos', path: '/empresa/demonstrativos', icon: Scale });
-    navItems.push({ name: 'Plano de Contas', path: '/empresa/plano-contas', icon: Network });
-    navItems.push({ name: 'Conciliação', path: '/empresa/conciliacao', icon: CheckSquare });
-  }
 
   return (
     <div className="h-screen overflow-hidden bg-gray-950 text-white flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white font-sans">
@@ -443,32 +411,10 @@ export function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Toggle Segmentado de Modo Pessoal e Empresarial */}
-            <div className="flex items-center p-1 bg-gray-900 border border-gray-800 rounded-2xl shadow-inner">
-              <button
-                onClick={() => setModoNoFirestore('pessoal')}
-                disabled={changingModo || modo === 'pessoal'}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  modo === 'pessoal'
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>Pessoal</span>
-              </button>
-              <button
-                onClick={() => setModoNoFirestore('empresarial')}
-                disabled={changingModo || modo === 'empresarial'}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  modo === 'empresarial'
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>Empresarial</span>
-              </button>
+            {/* Badge Fixo de Modo Empresarial */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 border border-violet-500/30 rounded-2xl text-xs font-bold text-violet-400">
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Modo Empresarial</span>
             </div>
 
             <div className="hidden lg:flex items-center mr-2 min-w-[160px] bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-800">
@@ -515,16 +461,10 @@ export function Dashboard() {
                 </span>
               </div>
               <p className="text-sm text-gray-400 mt-1">
-                Aqui está o resumo financeiro da sua conta {modo === 'empresarial' ? 'corporativa' : 'pessoal'} neste mês.
+                Aqui está o resumo financeiro da sua conta corporativa neste mês.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigate('/importar')}
-                className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-xs font-semibold rounded-xl transition-all shadow-sm"
-              >
-                Importar Extrato
-              </button>
               <button 
                 onClick={() => setIsModalOpen(true)}
                 className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
@@ -761,7 +701,7 @@ export function Dashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo} onImport={() => navigate('/importar')} />
+              <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo}  />
             </div>
             <div className="space-y-6">
               <ScoreGauge score={scoreData.score} label={scoreData.label} />

@@ -19,7 +19,7 @@ export function Metas() {
   
   // Modal nova meta
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [novaMeta, setNovaMeta] = useState({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
+  const [novaMeta, setNovaMeta] = useState({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Empresarial' });
   const [aiLoading, setAiLoading] = useState(false);
 
   const { width, height } = useWindowSize(); // for Confetti
@@ -83,7 +83,7 @@ export function Metas() {
       await applyXpEvent(uid, 'CADASTRAR_META');
       toast.success('+15 XP! Nova meta criada 🎯');
       setIsModalOpen(false);
-      setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Pessoal' });
+      setNovaMeta({ titulo: '', valorAlvo: '', prazo: '', categoria: 'Empresarial' });
     } catch (error) {
       console.error('Erro ao cadastrar meta no Firestore:', error);
       toast.error('Erro ao criar meta. Verifique permissões ou conexão com o Firestore.');
@@ -325,7 +325,7 @@ export function Metas() {
 
                            // 2. Cria transação de despesa vinculada
                            const transacaoRef = doc(collection(db, `transacoes/${user.uid}/items`));
-                           const modoAporte = m.categoria?.toLowerCase() === 'empresarial' ? 'empresarial' : 'pessoal';
+                           const modoAporte = 'empresarial';
                            const now = new Date();
                            const formattedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0).toISOString();
                            batch.set(transacaoRef, {

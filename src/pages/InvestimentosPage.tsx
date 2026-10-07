@@ -156,7 +156,6 @@ export function InvestimentosPage() {
   const navItems: { name: string; path: string; icon: any }[] = [
     { name: 'Dashboard',     path: '/dashboard',     icon: LayoutDashboard },
     { name: 'Transações',    path: '/transacoes',    icon: CreditCard },
-    { name: 'Importar',      path: '/importar',      icon: Upload },
     { name: 'Metas',         path: '/metas',         icon: Target },
     { name: 'Renda Extra',   path: '/renda-extra',   icon: TrendingUp },
     { name: 'Investimentos', path: '/investimentos', icon: BarChart2 },
@@ -211,7 +210,7 @@ export function InvestimentosPage() {
           valor: Number(quantidade) * Number(precoMedio),
           tipo: 'despesa',
           categoria: 'Investimentos',
-          modo: 'pessoal',
+          modo: 'empresarial',
           data: new Date().toISOString(),
           criadoEm: serverTimestamp()
         });

@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const newProfile: UserProfile = {
               nome: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuário',
               email: firebaseUser.email || '',
-              modo: 'pessoal',
+              modo: 'empresarial',
               plano: 'Free',
               xp: 0,
               nivel: 1,

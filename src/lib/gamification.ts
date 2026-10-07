@@ -18,7 +18,6 @@ export const LEVEL_THRESHOLDS = [
 // ── Catálogo de eventos de XP (fonte única de verdade para UI e lógica) ───────
 export const XP_EVENTS = {
   // ── GANHOS ────────────────────────────────────────────────────────────────
-  IMPORTAR_EXTRATO:    { xp: +20, label: 'Importar extrato',                tipo: 'ganho' as const },
   CADASTRAR_META:      { xp: +15, label: 'Cadastrar nova meta',             tipo: 'ganho' as const },
   META_CONCLUIDA:      { xp: +50, label: 'Marcar meta como concluída',      tipo: 'ganho' as const },
   ADICIONAR_RECEITA:   { xp: +10, label: 'Adicionar uma receita',           tipo: 'ganho' as const },

@@ -14,7 +14,7 @@ export async function seedDatabase(userId: string) {
     await setDoc(userRef, {
       nome: 'Usuário Teste',
       email: 'teste@financeai.com',
-      modo: 'pessoal',
+      modo: 'empresarial',
       plano: 'pro',
       xp: 150,
       nivel: 2,
@@ -60,7 +60,7 @@ export async function seedDatabase(userId: string) {
       valorAtual: 2500,
       prazo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(), // +1 ano
       status: 'ativa',
-      tipo: 'pessoal',
+      tipo: 'empresarial',
       userId
     });
 

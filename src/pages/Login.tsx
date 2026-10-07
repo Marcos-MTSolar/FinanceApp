@@ -65,7 +65,7 @@ export function Login() {
         const userProfile = {
           nome: nome.trim() || cred.user.displayName || cred.user.email?.split('@')[0] || 'Usuário',
           email: cred.user.email || email.trim(),
-          modo: 'pessoal',
+          modo: 'empresarial',
           plano: 'Free',
           xp: 0,
           nivel: 1,
@@ -113,7 +113,7 @@ export function Login() {
         const userProfile = {
           nome: cred.user.displayName || cred.user.email?.split('@')[0] || 'Usuário',
           email: cred.user.email || '',
-          modo: 'pessoal',
+          modo: 'empresarial',
           plano: 'Free',
           xp: 0,
           nivel: 1,

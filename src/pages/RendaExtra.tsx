@@ -52,7 +52,6 @@ export function RendaExtra() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
@@ -120,7 +119,7 @@ export function RendaExtra() {
         origem: 'renda_extra',
         rendaExtraId: rendaRef.id,
         userId: user.uid,
-        modo: profile?.modo || 'pessoal',
+        modo: 'empresarial',
         criadoEm: serverTimestamp()
       });
 

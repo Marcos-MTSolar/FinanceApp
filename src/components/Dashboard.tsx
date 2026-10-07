@@ -143,7 +143,7 @@ export function AlertasInteligentes({ alertas }: { alertas: string[] }) {
   );
 }
 
-export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { chartData: any[]; periodo: number; setPeriodo: (p: any) => void; onImport: () => void; }) {
+export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { chartData: any[]; periodo: number; setPeriodo: (p: any) => void; onImport?: () => void; }) {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 lg:p-8 shadow-xl shadow-black/20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -178,15 +178,16 @@ export function CashFlowChart({ chartData, periodo, setPeriodo, onImport }: { ch
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
-        <button 
-          onClick={onImport}
-          className="flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors py-2 px-4 rounded-xl hover:bg-indigo-500/10"
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          <span>Importar Extrato com IA</span>
-        </button>
-      </div>
+      {onImport && (
+        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
+          <button 
+            onClick={onImport}
+            className="flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors py-2 px-4 rounded-xl hover:bg-indigo-500/10"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -344,7 +345,7 @@ export function Dashboard() {
 
   if (!profile) return <div>Carregando...</div>;
 
-  const isPessoal = profile.modo === 'pessoal';
+  const isPessoal = false;
 
   const receitas = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
   const despesas = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + Math.abs(t.valor), 0);
@@ -386,9 +387,9 @@ export function Dashboard() {
             <div>
               <h2 className="text-xl font-bold tracking-tight">Olá, {profile.nome}</h2>
               <div className="flex items-center space-x-3 text-sm">
-                <span className="flex items-center text-gray-500 dark:text-gray-400">
-                  {isPessoal ? <User className="w-4 h-4 mr-1"/> : <Briefcase className="w-4 h-4 mr-1"/>}
-                  Modo {isPessoal ? 'Pessoal' : 'Empresarial'}
+                <span className="flex items-center text-violet-500 font-semibold">
+                  <Briefcase className="w-4 h-4 mr-1"/>
+                  Modo Empresarial
                 </span>
                 <span className="text-gray-300 dark:text-gray-600 hidden md:inline">|</span>
                 <div className="hidden md:block w-48">
@@ -416,12 +417,6 @@ export function Dashboard() {
               className="px-4 py-2 text-sm font-medium border border-indigo-200 text-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400 rounded-lg transition"
             >
               Simulador IA
-            </button>
-            <button 
-              onClick={() => switchMode(isPessoal ? 'empresarial' : 'pessoal')}
-              className="px-4 py-2 text-sm font-medium border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
-              Trocar para {isPessoal ? 'Empresarial' : 'Pessoal'}
             </button>
             <button onClick={handleLogout} className="p-2 text-gray-500 hover:text-red-500 transition">
               <LogOut className="w-5 h-5" />
@@ -476,7 +471,7 @@ export function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo} onImport={() => navigate('/importar')} />
+            <CashFlowChart chartData={chartData} periodo={periodo} setPeriodo={setPeriodo}  />
           </div>
 
           <div className="space-y-6">

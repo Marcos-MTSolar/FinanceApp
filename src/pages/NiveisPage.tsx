@@ -36,7 +36,6 @@ export function NiveisPage() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },
@@ -247,19 +246,7 @@ export function NiveisPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                  {/* Importar Extrato */}
-                  <div className="group flex items-start gap-3 p-4 bg-gray-950 border border-gray-800 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all duration-200">
-                    <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex-shrink-0">
-                      <FileUp className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span className="text-sm font-bold text-white">Importar Extrato</span>
-                        <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg whitespace-nowrap">+{XP_EVENTS.IMPORTAR_EXTRATO.xp} XP</span>
-                      </div>
-                      <p className="text-xs text-gray-400">Upload de PDF, CSV, OFX ou imagem na tela Importar.</p>
-                    </div>
-                  </div>
+                  
 
                   {/* Cadastrar Meta */}
                   <div className="group flex items-start gap-3 p-4 bg-gray-950 border border-gray-800 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all duration-200">

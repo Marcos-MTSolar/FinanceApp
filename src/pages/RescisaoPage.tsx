@@ -91,7 +91,6 @@ export function RescisaoPage() {
   }, [user?.uid]);
 
   useEffect(() => {
-    if (!profile?.modo || profile.modo !== 'empresarial') { navigate('/dashboard'); }
   }, [profile, navigate]);
 
   const funcionario = funcionarios.find(f => f.id === selectedId);
@@ -156,7 +155,6 @@ export function RescisaoPage() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },

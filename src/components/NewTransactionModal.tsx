@@ -43,12 +43,12 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!userId || modo !== 'empresarial' || !isOpen) return;
+    if (!userId || !isOpen) return;
     const unsub = onSnapshot(collection(db, `centrosCusto/${userId}/items`), snap => {
       setCentros(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return unsub;
-  }, [userId, modo, isOpen]);
+  }, [userId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -93,8 +93,8 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
         categoria,
         data: formattedDate,
         recorrente,
-        modo,
-        centroCusto: modo === 'empresarial' ? (centroCusto || '') : '',
+        modo: 'empresarial',
+        centroCusto: centroCusto || '',
         criadoEm: new Date().toISOString()
       };
 
@@ -228,8 +228,8 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
                 onChange={(e) => setCategoria(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-2xl text-sm font-medium text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
               >
-                {/* Capital de Giro aparece no topo apenas no modo empresarial e tipo despesa */}
-                {modo === 'empresarial' && tipo === 'despesa' && (
+                {/* Capital de Giro aparece no topo para despesas */}
+                {tipo === 'despesa' && (
                   <option value="Capital de Giro" className="bg-purple-900 text-purple-200 font-bold">
                     💰 Capital de Giro
                   </option>
@@ -258,7 +258,7 @@ export function NewTransactionModal({ isOpen, onClose, userId, modo }: NewTransa
           </div>
 
           {/* Campo Centro de Custo */}
-          {modo === 'empresarial' && tipo === 'despesa' && (
+          {tipo === 'despesa' && (
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 uppercase tracking-wider">
                 <Tag className="w-3.5 h-3.5 text-indigo-400" />

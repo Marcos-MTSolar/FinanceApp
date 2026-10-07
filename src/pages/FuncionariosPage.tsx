@@ -89,12 +89,7 @@ export function FuncionariosPage() {
       .catch(err => { console.error(err); setLoading(false); });
   }, [user?.uid, refreshTrigger]);
 
-  useEffect(() => {
-    if (!loading && profile && profile.modo !== 'empresarial') {
-      toast.error('Acesso exclusivo para modo empresarial.');
-      navigate('/dashboard');
-    }
-  }, [profile, loading, navigate]);
+
 
   const handleCpf = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value.replace(/\D/g, '')
@@ -149,7 +144,6 @@ export function FuncionariosPage() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Transações', path: '/transacoes', icon: CreditCard },
-    { name: 'Importar', path: '/importar', icon: Upload },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Renda Extra', path: '/renda-extra', icon: TrendingUp },
     { name: 'Assistente IA', path: '/chat', icon: MessageCircle },

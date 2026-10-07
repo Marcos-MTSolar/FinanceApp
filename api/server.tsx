@@ -6,12 +6,9 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import { Groq } from 'groq-sdk';
-import PDFParser from 'pdf2json';
-// pdf-parse import removido daqui para evitar problemas no serverless
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import admin, { type ServiceAccount } from 'firebase-admin';
-import multer from 'multer';
 import React from 'react';
 import * as ReactPDF from '@react-pdf/renderer';
 const { Document, Page, Text, View, StyleSheet } = ReactPDF as any;
@@ -122,11 +119,6 @@ const generatePdfStream = async (data: any) => {
   }
 };
 
-
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
 
 console.log('GROQ KEY:', process.env.GROQ_API_KEY ? 'carregada' : 'AUSENTE');
 
@@ -256,7 +248,12 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
         promptContext = `Perfil Empresarial. Faturamento: R$${faturamentoMensal}. Nº Funcionários: ${numFuncionarios}. Tem capital de giro: ${temCapitalGiro ? 'Sim' : 'Não'}. Dívidas empresariais: R$${dividasEmpresariais}. Margem lucro estimada: ${margemLucroEstimada}%. Maior dificuldade: ${maiorDificuldade}. Usa sistema contábil: ${usaSistemaContabil ? 'Sim' : 'Não'}. Score calculado: ${score} (0-1000). Forneça 3 recomendações organizacionais claras e curtas para melhorar o negócio, devolva apenas um JSON com um array de strings chamado 'recomendacoes' e nada mais.`;
       } else {
-        return res.status(400).json({ error: 'Modo inválido' });
+        const { faturamentoMensal = 0, numFuncionarios = 0, temCapitalGiro = false, dividasEmpresariais = 0, margemLucroEstimada = 0, maiorDificuldade = 'fluxo de caixa', usaSistemaContabil = false } = data;
+        if (margemLucroEstimada > 20) score += 150;
+        if (dividasEmpresariais === 0) score += 100;
+        else score -= 100;
+        if (temCapitalGiro) score += 80;
+        promptContext = `Perfil Empresarial. Faturamento: R$${faturamentoMensal}. Nº Funcionários: ${numFuncionarios}. Score calculado: ${score} (0-1000). Forneça 3 recomendações organizacionais claras e curtas para melhorar o negócio, devolva apenas um JSON com um array de strings chamado 'recomendacoes' e nada mais.`;
       }
 
       // Ensure score binds to 0-1000
@@ -280,228 +277,14 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
             recomendacoes = parsed.recomendacoes;
           }
         }
-      } catch (aiError: any) {
-        if (aiError?.status === 429) {
-          return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
-        }
-        console.error("Groq AI Engine error, using fallbacks:", aiError);
+      } catch (err) {
+        console.error("Erro na chamada Groq do diagnóstico:", err);
       }
 
       res.json({ score, recomendacoes });
     } catch (err: any) {
       console.error(err);
       res.status(500).json({ error: 'Erro no servidor' });
-    }
-  });
-
-  // API Route to parse PDF from a URL (e.g. Firebase Storage public URL)
-  app.post('/api/parse-pdf', requireAuth, async (req, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) return res.status(400).json({ error: 'URL required' });
-
-      const fetch = (await import('node-fetch')).default || globalThis.fetch;
-      const pdfResponse = await fetch(url);
-      const arrayBuffer = await pdfResponse.arrayBuffer();
-      
-      const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js');
-      const pdfParse = pdfParseModule.default || pdfParseModule;
-      const data = await pdfParse(Buffer.from(arrayBuffer));
-      
-      res.json({ text: data.text });
-    } catch (err: any) {
-      console.error('Error parsing PDF:', err);
-      res.status(500).json({ error: 'Erro ao extrair PDF' });
-    }
-  });
-
-  // API Route to classify transactions using Groq
-  app.post('/api/ia/classificar', requireAuth, aiLimiter, upload.single('file'), async (req: any, res: any) => {
-    console.log('BODY recebido:', JSON.stringify(req.body).slice(0, 200));
-    console.log('GROQ KEY presente:', !!process.env.GROQ_API_KEY);
-    try {
-      let textoBruto = req.body.textoBruto || ''; 
-      let transacoes = req.body.transacoes ? JSON.parse(req.body.transacoes) : null;
-      
-      const fileBuffer = req.file?.buffer;
-      if (fileBuffer) {
-        const ext = req.file.originalname.split('.').pop()?.toLowerCase();
-        if (ext === 'pdf') {
-          try {
-            const textoExtraido = await new Promise<string>((resolve, reject) => {
-              const pdfParser = new PDFParser(null, true);
-              
-              pdfParser.on('pdfParser_dataReady', () => {
-                const texto = (pdfParser as any).getRawTextContent();
-                resolve(texto);
-              });
-              
-              pdfParser.on('pdfParser_dataError', (errData: any) => {
-                reject(new Error(errData?.parserError || 'Erro no pdf2json'));
-              });
-              
-              pdfParser.parseBuffer(fileBuffer);
-            });
-
-            console.log('[pdf2json] Chars extraídos:', textoExtraido.length);
-            console.log('[pdf2json] Amostra:', textoExtraido.substring(0, 400));
-
-            if (!textoExtraido || textoExtraido.trim().length < 50) {
-              return res.status(400).json({ 
-                error: 'PDF sem texto extraível. Tente converter para CSV.' 
-              });
-            }
-
-            textoBruto = textoExtraido;
-
-          } catch (pdfErr: any) {
-            console.error('[pdf2json] Erro:', pdfErr.message);
-            return res.status(400).json({ 
-              error: 'Erro ao processar PDF: ' + pdfErr.message 
-            });
-          }
-        } else if (['csv', 'ofx'].includes(ext || '')) {
-          textoBruto = fileBuffer.toString('utf-8');
-        } else if (['xlsx', 'xls'].includes(ext || '')) {
-          const XLSX = await import('xlsx');
-          const workbook = XLSX.read(fileBuffer);
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          transacoes = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        }
-      }
-
-      // Monta o texto de entrada para o LLM
-      let textoExtraido = '';
-      if (textoBruto) {
-        console.log(`[Importação] textoBruto extraído. Tamanho original: ${textoBruto.length} caracteres.`);
-        textoExtraido = textoBruto.substring(0, 8000);
-        console.log(`[Importação] textoExtraido que será enviado à IA: ${textoExtraido.length} caracteres.`);
-        
-        console.log('=== AMOSTRA TEXTO PARA GROQ ===');
-        console.log(textoExtraido.substring(0, 800));
-        console.log('================================');
-
-        const temPadraoExtrato = 
-          textoExtraido.includes('Pix') || 
-          textoExtraido.includes('PIX') ||
-          textoExtraido.includes('Débito') ||
-          textoExtraido.includes('Crédito') ||
-          textoExtraido.includes('TED') ||
-          textoExtraido.includes('Data') ||
-          textoExtraido.includes('/202');
-
-        console.log('[Validação] Tem padrão de extrato:', temPadraoExtrato);
-        console.log('[Validação] Amostra do texto:', textoExtraido.substring(0, 300));
-
-        if (!temPadraoExtrato) {
-          return res.status(400).json({ 
-            error: 'O arquivo não parece ser um extrato bancário válido.' 
-          });
-        }
-      } else if (transacoes) {
-        textoExtraido = JSON.stringify(transacoes.slice(0, 80));
-      } else {
-        return res.status(400).json({ error: 'Nenhum dado fornecido' });
-      }
-
-      const prompt = `
-Você é um classificador de extratos bancários brasileiros.
-Analise o texto abaixo extraído de um PDF de extrato bancário.
-
-REGRA PRINCIPAL DE TIPO:
-- Se o valor no texto aparecer com sinal NEGATIVO (ex: -48,90 ou -1.860,32) = DESPESA
-- Se o valor no texto aparecer SEM sinal negativo ou com valor positivo = RECEITA
-- Coluna "Débito" sempre = DESPESA (independente do sinal)
-- Coluna "Crédito" sempre = RECEITA
-
-EXEMPLOS DO EXTRATO SANTANDER INTERNET BANKING:
-- "PIX ENVIADO Sandra Feliciano da Silva 000000 -60,00" → DESPESA, valor 60.00
-- "PIX RECEBIDO MT SOLUCOES EM ENERGIA E 325197 3.000,00" → RECEITA, valor 3000.00
-- "OPERACOES CREDITO IMOBILIARIO -1.860,32" → DESPESA, categoria Moradia, valor 1860.32
-- "MENSALIDADE DE SEGURO TOKIO MARINE 000000 -283,77" → DESPESA, categoria Saúde
-- "PAGAMENTO CONTA CELULAR VIVO-PE -49,00" → DESPESA, categoria Telecomunicações
-- "PIX AGENDADO Condominio -220,00" → DESPESA, categoria Moradia
-- "REMUNERACAO APLICACAO AUTOMATICA 0,01" → IGNORAR
-- "IOF" → IGNORAR
-
-REGRAS GERAIS:
-1. IGNORE completamente: IOF, REMUNERACAO APLICACAO AUTOMATICA
-2. PIX ENVIADO = sempre DESPESA
-3. PIX RECEBIDO = sempre RECEITA  
-4. TED RECEBIDA = sempre RECEITA
-5. Data DD/MM/AAAA → converter para AAAA-MM-DD
-6. Use valor absoluto (sem sinal negativo) no campo "valor"
-7. Vírgula como decimal: 1.860,32 → 1860.32
-8. Ponto como separador de milhar: 1.860,32 → 1860.32
-
-CATEGORIAS para DESPESA:
-- Transporte: Uber, 99 Food, posto, combustível, parking
-- Alimentação: mercado, hortifruti, restaurante, padaria, lanchonete
-- Moradia: condomínio, OPERACOES CREDITO IMOBILIARIO, aluguel
-- Saúde: farmácia, médico, seguro saúde, TOKIO MARINE, plano de saúde
-- Energia: Companhia Energetica, CELPE, NEOENERGIA, COPEL
-- Telecomunicações: VIVO, Claro, TIM, OI, BRASIL REDES
-- Serviços: ZOOP, PAGALEVE, DELTAPAG, contabilidade
-- Pessoal: PIX ENVIADO para nome de pessoa física
-- Outros: qualquer outro não classificado acima
-
-CATEGORIAS para RECEITA:
-- Receita Operacional: PIX RECEBIDO, TED RECEBIDA, transferência recebida
-- Outros: qualquer outro crédito
-
-Retorne SOMENTE JSON válido, sem markdown, sem explicação:
-
-{
-  "transacoes": [
-    {
-      "descricao": "descrição limpa sem números de documento",
-      "valor": 60.00,
-      "tipo": "despesa",
-      "categoria": "Pessoal",
-      "data": "2026-05-04"
-    }
-  ]
-}
-
-TEXTO DO EXTRATO:
-${textoExtraido.substring(0, 8000)}
-`;
-
-      console.log('=== PROMPT ENVIADO AO GROQ (primeiros 1000 chars) ===');
-      console.log(prompt.substring(0, 1000));
-      console.log('=== FIM DO PROMPT ===');
-
-      try {
-        const chatCompletion = await groq.chat.completions.create({
-          messages: [{ role: 'user', content: prompt }],
-          model: 'llama-3.3-70b-versatile',  // 70B para máxima precisão na classificação
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-        });
-
-        const aiResponse = chatCompletion.choices[0]?.message?.content;
-        console.log('Resposta bruta do modelo Groq em /api/ia/classificar:', aiResponse);
-
-        if (aiResponse) {
-          try {
-            const parsed = JSON.parse(aiResponse);
-            return res.json({ transacoes: parsed.transacoes || [] });
-          } catch (parseError) {
-            console.error('Erro no JSON.parse da resposta do Groq:', parseError, 'Texto retornado:', aiResponse);
-            return res.status(500).json({ error: 'Erro ao analisar a resposta da IA como JSON válido.' });
-          }
-        } else {
-          return res.status(500).json({ error: 'Sem resposta da IA' });
-        }
-      } catch (groqErr: any) {
-        if (groqErr?.status === 429) {
-          return res.status(429).json({ error: 'Limite de requisições atingido. Aguarde alguns instantes e tente novamente.' });
-        }
-        throw groqErr;
-      }
-    } catch (err: any) {
-      console.error('Error classifying with Groq in /api/ia/classificar:', err);
-      res.status(500).json({ error: 'Erro na classificação via IA: ' + err.message });
     }
   });
 
